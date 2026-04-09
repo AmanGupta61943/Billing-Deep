@@ -17,7 +17,7 @@ A comprehensive inventory management system with features like barcode generatio
 1. Install dependencies:
 ```bash
 npm install
-cd client
+cd frontend
 npm install
 ```
 
