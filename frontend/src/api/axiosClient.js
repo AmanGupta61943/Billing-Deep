@@ -1,8 +1,12 @@
 import axios from 'axios';
 import { getStoredAuth } from '../utils/auth';
 
+const API_BASE_URL =
+  process.env.REACT_APP_API_URL?.trim() ||
+  'https://billing-deep-backend.onrender.com/api';
+
 const axiosClient = axios.create({
-  baseURL: 'http://localhost:5000',
+  baseURL: API_BASE_URL,
 });
 
 axiosClient.interceptors.request.use((config) => {
