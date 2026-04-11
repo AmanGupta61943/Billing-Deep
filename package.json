@@ -1,0 +1,11 @@
+{
+  "name": "imsd",
+  "private": true,
+  "description": "Inventory Management System — convenience scripts from repo root",
+  "scripts": {
+    "install:all": "npm install --prefix backend && npm install --prefix frontend",
+    "dev:backend": "npm run dev --prefix backend",
+    "dev:frontend": "npm start --prefix frontend",
+    "dev:full": "npm run dev:full --prefix backend"
+  }
+}
