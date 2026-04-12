@@ -36,75 +36,58 @@ function NewBill({ scannedItems, addItemToBill, increaseItemQuantity, decreaseIt
   
   const [isScanning, setIsScanning] = useState(true);
 
-  // ─── Master scan handler ─────────────────────────────────────────────────
-  // Called by BarcodeScanner with the raw decoded text (QR or barcode).
-  //
-  // MODE 1 — QR with embedded JSON (INSTANT, zero API calls):
-  //   QR text → JSON.parse → product object → addItemToBill()
-  //   Same pattern as PhonePe / Paytm — all data lives in the QR.
-  //
-  // MODE 2 — Plain barcode (API fallback):
-  //   Barcode string → GET /api/products/barcode/:code → addItemToBill()
+  // ─── QR scan handler ────────────────────────────────────────────────────
+  // PRIMARY: QR with JSON → instant add (0 network calls, like PhonePe/Paytm)
+  // FALLBACK: plain text → API lookup (for legacy barcode-labelled products)
   // ─────────────────────────────────────────────────────────────────────────
   const handleBarcodeScanResult = async (decodedText) => {
-    console.log('[NewBill] scan received:', decodedText);
+    console.log('[QR] received:', decodedText);
 
-    // Try to parse as QR JSON first
+    // ── Try QR JSON first ────────────────────────────────────────────────
     try {
-      const qrData = JSON.parse(decodedText);
-
-      // Validate the QR contains the minimum product fields
-      const id   = qrData._id || qrData.id;
-      const name = qrData.name;
-      const cost = qrData.cost ?? qrData.price;
+      const data = JSON.parse(decodedText);
+      const id   = data._id || data.id;
+      const name = data.name;
+      const cost = data.cost ?? data.price;
 
       if (id && name && cost != null) {
-        const product = {
-          _id:     id,
+        addItemToBill({
+          _id:   id,
           name,
-          cost:    Number(cost),
-          price:   Number(qrData.price ?? cost),
-          barcode: qrData.barcode || '',
+          cost:  Number(cost),
+          price: Number(data.price ?? cost),
           quantity: 1,
-        };
-        console.log('[NewBill] ⚡ QR instant add (no API):', product.name);
-        addItemToBill(product);
-        return; // ← done, no network call needed
+        });
+        console.log('[QR] ⚡ instant add:', name);
+        return; // done — no API call
       }
+      console.warn('[QR] JSON found but missing fields:', data);
     } catch (_) {
-      // Not JSON — fall through to barcode API lookup
+      // Not JSON — treat as barcode and try API
     }
 
-    // Plain barcode → API fallback
-    await handleBarcodeScan(decodedText);
+    // ── Barcode API fallback ─────────────────────────────────────────────
+    console.log('[QR] falling back to API for:', decodedText);
+    try {
+      const { data: product } = await axiosClient.get('/api/products/barcode/' + decodedText);
+      addItemToBill(product);
+    } catch (err) {
+      const status = err.response?.status;
+      if (status === 404) {
+        navigate(`/stock/add?barcode=${decodedText}`, { state: { fromNewBill: true } });
+      } else if (status === 401) {
+        alert('Session expired. Please log in again.');
+        navigate('/auth');
+      } else if (!err.response) {
+        alert('Network error. Check your connection and try again.');
+      } else {
+        alert(`Error: ${err.response?.data?.message || err.message}`);
+      }
+    }
   };
 
   const handlePaymentMethodChange = (event) => {
     setPaymentMethod(event.target.value);
-  };
-
-  const handleBarcodeScan = async (barcode) => {
-    console.log('[NewBill] barcode API lookup:', barcode);
-    try {
-      const response = await axiosClient.get('/api/products/barcode/' + barcode);
-      const product  = response.data;
-      console.log('[NewBill] product found:', product.name);
-      addItemToBill(product);
-    } catch (error) {
-      const status = error.response?.status;
-      if (status === 404) {
-        navigate(`/stock/add?barcode=${barcode}`, { state: { fromNewBill: true } });
-      } else if (status === 401) {
-        alert('Session expired. Please log in again.');
-        navigate('/auth');
-      } else if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
-        alert('Backend is starting up (cold-start). Wait ~15 seconds and scan again.');
-      } else if (!error.response) {
-        alert('Cannot reach backend. Check your connection.');
-      } else {
-        alert(`Server error (${status}): ${error.response?.data?.message || error.message}`);
-      }
-    }
   };
 
   // Recalculate total whenever scannedItems changes
