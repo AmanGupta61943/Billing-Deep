@@ -5,8 +5,7 @@ import SearchIcon from '@mui/icons-material/Search';
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import RemoveIcon from '@mui/icons-material/Remove';
-import CloseIcon from '@mui/icons-material/Close';
-import { Html5Qrcode } from 'html5-qrcode';
+import BarcodeScanner from './BarcodeScanner';
 import { useNavigate } from 'react-router-dom';
 import axiosClient from '../api/axiosClient';
 import Popper from '@mui/material/Popper';
@@ -36,49 +35,15 @@ function NewBill({ scannedItems, addItemToBill, increaseItemQuantity, decreaseIt
   const [createdBill, setCreatedBill] = useState(null);
   
   const [isScanning, setIsScanning] = useState(true);
-  const [lastScan, setLastScan] = useState({ text: '', time: 0 });
 
-  const handleScanRef = React.useRef();
-
-  handleScanRef.current = async (scannedText) => {
-    const now = Date.now();
-    if (scannedText && (scannedText !== lastScan.text || now - lastScan.time > 2000)) {
-      setLastScan({ text: scannedText, time: now });
-      await handleBarcodeScan(scannedText);
-    }
+  const handleBarcodeScanResult = async (decodedText) => {
+    await handleBarcodeScan(decodedText);
   };
-
-  useEffect(() => {
-    let html5QrCode;
-    if (isScanning) {
-      html5QrCode = new Html5Qrcode("scanner-container");
-      html5QrCode.start(
-        { facingMode: "environment" },
-        { fps: 15 },
-        (decodedText) => {
-          if (handleScanRef.current) {
-            handleScanRef.current(decodedText);
-          }
-        },
-        () => {} // ignores parsing errors
-      ).catch(err => console.log("Scanner start failed:", err));
-    }
-    return () => {
-      if (html5QrCode && html5QrCode.isScanning) {
-        html5QrCode.stop().then(() => html5QrCode.clear()).catch(console.error);
-      }
-    };
-  }, [isScanning]);
 
   const handlePaymentMethodChange = (event) => {
     setPaymentMethod(event.target.value);
   };
 
-  const handleTestScan = async () => {
-    const testBarcode = '1234567890';
-    console.log('Test scan:', testBarcode);
-    await handleBarcodeScan(testBarcode);
-  };
 
   const handleBarcodeScan = async (barcode) => {
     try {
@@ -292,19 +257,10 @@ function NewBill({ scannedItems, addItemToBill, increaseItemQuantity, decreaseIt
           }}
         >
           {isScanning ? (
-            <Box sx={{ position: 'relative', width: '100%', height: 160, bgcolor: '#000', borderRadius: 1.8, overflow: 'hidden' }}>
-              <div
-                id="scanner-container"
-                style={{ width: '100%', height: '100%', overflow: 'hidden' }}
-              />
-              <IconButton
-                size="small"
-                onClick={() => setIsScanning(false)}
-                sx={{ position: 'absolute', top: 6, right: 6, zIndex: 10, bgcolor: 'rgba(255,255,255,0.7)', '&:hover': { bgcolor: 'rgba(255,255,255,0.9)' } }}
-              >
-                <CloseIcon fontSize="small" />
-              </IconButton>
-            </Box>
+            <BarcodeScanner
+              onScan={handleBarcodeScanResult}
+              onClose={() => setIsScanning(false)}
+            />
           ) : (
             <Box
               sx={{
