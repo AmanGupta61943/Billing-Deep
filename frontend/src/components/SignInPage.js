@@ -38,7 +38,7 @@ const SignInPage = () => {
     setLoading(true);
 
     try {
-      const response = await axiosClient.post('/api/auth/login', { email, password });
+      await axiosClient.post('/auth/signup', { name, email, password });
       const { token, user } = response.data;
 
       saveAuth({ token, user, remember: rememberMe });

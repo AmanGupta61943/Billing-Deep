@@ -27,7 +27,7 @@ const SignUpPage = () => {
     setLoading(true);
 
     try {
-      await axiosClient.post('/api/auth/signup', { name, email, password });
+      await axiosClient.post('/auth/signup', { name, email, password });
       navigate('/signin');
     } catch (err) {
       const message =
