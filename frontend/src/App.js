@@ -308,18 +308,6 @@ function BottomNavBar() {
             from: { opacity: 0, transform: 'translateY(8px)' },
             to: { opacity: 1, transform: 'translateY(0)' },
           },
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            top: -24,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            width: 96,
-            height: 58,
-            background: '#f5f5f5',
-            borderBottomLeftRadius: 52,
-            borderBottomRightRadius: 52,
-          },
         }}
       >
         <Box onClick={() => navigate('/dashboard')} sx={itemSx(isHome)}>
@@ -379,7 +367,7 @@ function BottomNavBar() {
           sx={{
             position: 'absolute',
             left: '50%',
-            top: -24,
+            top: -36,
             transform: 'translateX(-50%)',
             width: 72,
             height: 72,
@@ -389,13 +377,14 @@ function BottomNavBar() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 12px 24px rgba(227,173,20,0.45), 0 0 16px rgba(255,216,77,0.5)',
+            boxShadow: '0 0 0 5px #ffffff, 0 12px 24px rgba(227,173,20,0.45)',
             cursor: 'pointer',
             outline: 'none',
+            zIndex: 3,
             transition: 'transform 140ms ease, box-shadow 180ms ease',
             '&:active': {
               transform: 'translateX(-50%) scale(0.95)',
-              boxShadow: '0 8px 18px rgba(227,173,20,0.42)',
+              boxShadow: '0 0 0 5px #ffffff, 0 8px 18px rgba(227,173,20,0.42)',
             },
           }}
         >
