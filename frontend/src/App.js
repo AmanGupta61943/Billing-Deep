@@ -492,14 +492,20 @@ function AppLayout({
 }
 
 function App() {
-  const [scannedItems, setScannedItems] = useState([]);
+  // ── Restore scannedItems from localStorage (survives iOS tab discard) ──
+  const [scannedItems, setScannedItems] = useState(() => {
+    try {
+      const saved = localStorage.getItem('imsd_scannedItems');
+      return saved ? JSON.parse(saved) : [];
+    } catch { return []; }
+  });
 
   // Warm up Render backend on app start (free tier sleeps after 15 min)
   useEffect(() => { pingBackend(); }, []);
 
-  // Log scannedItems state whenever it changes
+  // Persist scannedItems to localStorage on every change
   useEffect(() => {
-    console.log('App.js - scannedItems state updated:', scannedItems);
+    localStorage.setItem('imsd_scannedItems', JSON.stringify(scannedItems));
   }, [scannedItems]);
 
   const addItemToBill = (product) => {
@@ -535,6 +541,7 @@ function App() {
 
   const clearScannedItems = () => {
     setScannedItems([]);
+    localStorage.removeItem('imsd_scannedItems');
   };
 
   return (

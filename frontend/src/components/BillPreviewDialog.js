@@ -75,12 +75,16 @@ function BillPreviewDialog({ open, onClose, billData }) {
     }
     const full = `91${cleaned}`;
 
+    // Snapshot bill to localStorage — survives iOS tab discard
+    try { localStorage.setItem('imsd_lastBill', JSON.stringify(billData)); } catch (_) {}
+
     if (shareDialog.mode === 'whatsapp') {
       const msg = buildReceiptText(billData, settings, true);
-      window.open(`https://wa.me/${full}?text=${encodeURIComponent(msg)}`, '_blank');
+      // Use location.href (same tab) so iOS Safari doesn't blank the original page
+      window.location.href = `https://wa.me/${full}?text=${encodeURIComponent(msg)}`;
     } else {
       const msg = buildReceiptText(billData, settings, false);
-      window.open(`sms:+${full}?body=${encodeURIComponent(msg)}`, '_blank');
+      window.location.href = `sms:+${full}?body=${encodeURIComponent(msg)}`;
     }
 
     closeShareDialog();
