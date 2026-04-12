@@ -48,7 +48,10 @@ function AddProduct({ addItemToBill }) {
     minimumQuantity: '',
   });
 
-  const [addToStock, setAddToStock] = useState(true);
+  // Default "Add to Stock" OFF when coming from Quick Add on the billing page,
+  // so the cashier can add a one-off item without cluttering stock.
+  const comingFromBill = !!location.state?.fromNewBill;
+  const [addToStock, setAddToStock] = useState(!comingFromBill);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [savedProduct, setSavedProduct] = useState(null); // holds saved product for QR display
