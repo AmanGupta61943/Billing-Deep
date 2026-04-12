@@ -209,8 +209,13 @@ function NewBill({ scannedItems, addItemToBill: addItemToBillProp, increaseItemQ
         {/* Row 1: Search bar */}
         <ClickAwayListener onClickAway={() => setOpenSuggestions(false)}>
           <Paper ref={searchRef} sx={{ p: '3px 8px', display: 'flex', alignItems: 'center', borderRadius: 2, border: '1px solid #e7e7e7', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-            <InputBase sx={{ ml: 1, flex: 1, fontSize: 14 }} placeholder="Search by name…" value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)} inputProps={{ 'aria-label': 'search products' }} />
+            <InputBase
+              sx={{ ml: 1, flex: 1, fontSize: 16 /* prevents iOS auto-zoom on focus */ }}
+              placeholder="Search by name…"
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              inputProps={{ 'aria-label': 'search products', style: { fontSize: 16 } }}
+            />
             <IconButton sx={{ p: '6px' }}><SearchIcon fontSize="small" /></IconButton>
 
             <Popper open={openSuggestions && suggestions.length > 0} anchorEl={searchRef.current} role={undefined} transition disablePortal placement="top-start"

@@ -4,8 +4,10 @@ import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ContactSupportIcon from '@mui/icons-material/ContactSupport';
 import EmailIcon from '@mui/icons-material/Email';
 import PhoneIcon from '@mui/icons-material/Phone';
-import BusinessIcon from '@mui/icons-material/Business';
 import { useNavigate } from 'react-router-dom';
+
+const PHONE = '9399357485';
+const EMAIL = 'amangupta61943@gmail.com';
 
 function ContactUs() {
   const navigate = useNavigate();
@@ -28,45 +30,49 @@ function ContactUs() {
         </Typography>
 
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+          {/* Phone */}
           <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
             <Box sx={{ p: 1, bgcolor: '#e3f2fd', borderRadius: '50%', color: '#1976d2', display: 'flex' }}>
               <PhoneIcon />
             </Box>
             <Box>
               <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#333' }}>Phone Support</Typography>
-              <Typography variant="body2" sx={{ color: '#666' }}>+91 9876543210</Typography>
+              <Typography
+                component="a"
+                href={`tel:${PHONE}`}
+                variant="body2"
+                sx={{ color: '#1976d2', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
+              >
+                +91 {PHONE}
+              </Typography>
             </Box>
           </Box>
 
+          {/* Email */}
           <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
             <Box sx={{ p: 1, bgcolor: '#e8f5e9', borderRadius: '50%', color: '#388e3c', display: 'flex' }}>
               <EmailIcon />
             </Box>
             <Box>
               <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#333' }}>Email Us</Typography>
-              <Typography variant="body2" sx={{ color: '#666' }}>support@billingdeep.com</Typography>
-            </Box>
-          </Box>
-
-          <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 2 }}>
-            <Box sx={{ p: 1, bgcolor: '#fff3e0', borderRadius: '50%', color: '#f57c00', display: 'flex' }}>
-              <BusinessIcon />
-            </Box>
-            <Box>
-              <Typography variant="subtitle2" sx={{ fontWeight: 600, color: '#333' }}>Office Address</Typography>
-              <Typography variant="body2" sx={{ color: '#666' }}>
-                123 Deep Tech Park, Level 4<br />
-                Bangalore, Karnataka 560001
+              <Typography
+                component="a"
+                href={`mailto:${EMAIL}`}
+                variant="body2"
+                sx={{ color: '#388e3c', textDecoration: 'none', '&:hover': { textDecoration: 'underline' } }}
+              >
+                {EMAIL}
               </Typography>
             </Box>
           </Box>
         </Box>
 
-        <Button 
-          variant="outlined" 
-          fullWidth 
-          sx={{ mt: 5, py: 1.5, borderRadius: 2, fontWeight: 600, textTransform: 'none' }}
-          onClick={() => window.location.href = "mailto:support@billingdeep.com"}
+        <Button
+          variant="outlined"
+          fullWidth
+          startIcon={<EmailIcon />}
+          sx={{ mt: 5, py: 1.5, borderRadius: 2, fontWeight: 600, textTransform: 'none', borderColor: '#388e3c', color: '#388e3c', '&:hover': { bgcolor: '#e8f5e9' } }}
+          onClick={() => window.location.href = `mailto:${EMAIL}`}
         >
           Send an Email
         </Button>
