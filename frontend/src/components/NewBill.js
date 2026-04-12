@@ -130,7 +130,7 @@ function NewBill({ scannedItems, addItemToBill: addItemToBillProp, increaseItemQ
 
   // ─────────────────────────────────────────────────────────────────────
   return (
-    <Container maxWidth="sm" sx={{ mt: 0, px: { xs: 1.5, sm: 2 }, pb: 20 }}>
+    <Container maxWidth="sm" sx={{ mt: 0, px: { xs: 1.5, sm: 2 }, pb: 26 }}>
       <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
 
         {/* ── Header: payment + total ──────────────────────────────────── */}
@@ -155,35 +155,6 @@ function NewBill({ scannedItems, addItemToBill: addItemToBillProp, increaseItemQ
           <Typography variant="body2" sx={{ fontWeight: 600 }}>Date: {currentDate} {currentTime}</Typography>
         </Box>
 
-        {/* ── Action buttons: Voice + Scan ─────────────────────────────── */}
-        <Box sx={{ display: 'flex', gap: 1.5 }}>
-          <Button
-            fullWidth
-            variant="outlined"
-            startIcon={<MicIcon />}
-            onClick={() => setShowVoice(true)}
-            sx={{
-              py: 1.6, borderRadius: 2, fontWeight: 700, fontSize: 15,
-              borderColor: '#1976d2', color: '#1976d2',
-              '&:hover': { bgcolor: '#e3f2fd', borderColor: '#1565c0' },
-            }}
-          >
-            Voice
-          </Button>
-          <Button
-            fullWidth
-            variant="contained"
-            startIcon={<QrCodeScannerIcon />}
-            onClick={() => setShowScanner(true)}
-            sx={{
-              py: 1.6, borderRadius: 2, fontWeight: 700, fontSize: 15,
-              bgcolor: '#005745', '&:hover': { bgcolor: '#004035' },
-              boxShadow: '0 6px 16px rgba(0,87,69,0.3)',
-            }}
-          >
-            Scan QR
-          </Button>
-        </Box>
 
         {/* ── Scanned items ─────────────────────────────────────────────── */}
         <Paper elevation={0} sx={{ p: 1.5, borderRadius: 2.5, border: '1px solid #ececec', boxShadow: '0 4px 16px rgba(0,0,0,0.05)', minHeight: 160 }}>
@@ -227,14 +198,44 @@ function NewBill({ scannedItems, addItemToBill: addItemToBillProp, increaseItemQ
         </Paper>
       </Box>
 
-      {/* ── Fixed bottom bar: search + create bill ────────────────────── */}
-      <Box sx={{ position: 'fixed', left: '50%', transform: 'translateX(-50%)', bottom: 86, width: '100%', maxWidth: 600, zIndex: 1110, px: { xs: 1.5, sm: 2 } }}>
-        {/* Search bar */}
+      {/* ── Fixed bottom action bar (replaces system nav) ─────────────── */}
+      <Box sx={{
+        position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 1110,
+        bgcolor: '#ffffff', borderTop: '1px solid #e8e8e8',
+        boxShadow: '0 -6px 24px rgba(0,0,0,0.1)',
+        px: { xs: 1.5, sm: 2 }, pt: 1, pb: 'env(safe-area-inset-bottom, 12px)',
+        display: 'flex', flexDirection: 'column', gap: 0.8,
+      }}>
+        {/* Row 1: Voice + Scan QR */}
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            fullWidth variant="outlined"
+            startIcon={<MicIcon />}
+            onClick={() => setShowVoice(true)}
+            sx={{ py: 1.3, borderRadius: 2, fontWeight: 700, fontSize: 14,
+              borderColor: '#1976d2', color: '#1976d2',
+              '&:hover': { bgcolor: '#e3f2fd' } }}
+          >
+            Voice
+          </Button>
+          <Button
+            fullWidth variant="contained"
+            startIcon={<QrCodeScannerIcon />}
+            onClick={() => setShowScanner(true)}
+            sx={{ py: 1.3, borderRadius: 2, fontWeight: 700, fontSize: 14,
+              bgcolor: '#005745', '&:hover': { bgcolor: '#004035' },
+              boxShadow: '0 4px 12px rgba(0,87,69,0.3)' }}
+          >
+            Scan QR
+          </Button>
+        </Box>
+
+        {/* Row 2: Search bar */}
         <ClickAwayListener onClickAway={() => setOpenSuggestions(false)}>
-          <Paper ref={searchRef} sx={{ p: '4px 8px', display: 'flex', alignItems: 'center', borderRadius: 2, border: '1px solid #e7e7e7', boxShadow: '0 6px 18px rgba(0,0,0,0.09)', mb: 1 }}>
+          <Paper ref={searchRef} sx={{ p: '3px 8px', display: 'flex', alignItems: 'center', borderRadius: 2, border: '1px solid #e7e7e7', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
             <InputBase sx={{ ml: 1, flex: 1, fontSize: 14 }} placeholder="Search by name…" value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)} inputProps={{ 'aria-label': 'search products' }} />
-            <IconButton sx={{ p: '8px' }}><SearchIcon fontSize="small" /></IconButton>
+            <IconButton sx={{ p: '6px' }}><SearchIcon fontSize="small" /></IconButton>
 
             <Popper open={openSuggestions && suggestions.length > 0} anchorEl={searchRef.current} role={undefined} transition disablePortal placement="top-start"
               style={{ zIndex: 1112, width: searchRef.current?.clientWidth, marginBottom: 6 }}>
@@ -255,14 +256,15 @@ function NewBill({ scannedItems, addItemToBill: addItemToBillProp, increaseItemQ
           </Paper>
         </ClickAwayListener>
 
-        {/* Action row: Quick Add + Create Bill */}
+        {/* Row 3: Quick Add + Create Bill */}
         <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button variant="contained" sx={{ flex: 1, borderRadius: 1.6, bgcolor: '#8d6e63', textTransform: 'uppercase', fontWeight: 600, py: 1.3, '&:hover': { bgcolor: '#6d4c41' } }}
+          <Button variant="contained"
+            sx={{ flex: 1, borderRadius: 1.6, bgcolor: '#8d6e63', textTransform: 'uppercase', fontWeight: 600, py: 1.1, '&:hover': { bgcolor: '#6d4c41' } }}
             onClick={() => navigate('/stock/add', { state: { fromNewBill: true } })}>
             Quick Add
           </Button>
           <Button variant="contained" endIcon={<ArrowForwardIcon />}
-            sx={{ flex: 1, borderRadius: 1.6, bgcolor: '#4caf50', textTransform: 'uppercase', fontWeight: 600, py: 1.3, '&:hover': { bgcolor: '#388e3c' } }}
+            sx={{ flex: 1, borderRadius: 1.6, bgcolor: '#4caf50', textTransform: 'uppercase', fontWeight: 600, py: 1.1, '&:hover': { bgcolor: '#388e3c' } }}
             onClick={handleCreateBill} disabled={scannedItems.length === 0}>
             Create Bill
           </Button>

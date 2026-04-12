@@ -417,7 +417,7 @@ function AppLayout({
 
   const hideHeaderRoutes = ['/', '/auth', '/signin', '/signup'];
   const shouldHideHeader = hideHeaderRoutes.includes(location.pathname);
-  const hideBottomNavRoutes = ['/', '/auth', '/signin', '/signup'];
+  const hideBottomNavRoutes = ['/', '/auth', '/signin', '/signup', '/new-bill'];
   const shouldHideBottomNav = hideBottomNavRoutes.includes(location.pathname);
 
   return (
