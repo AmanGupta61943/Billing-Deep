@@ -198,7 +198,7 @@ function NewBill({ scannedItems, addItemToBill: addItemToBillProp, increaseItemQ
         </Paper>
       </Box>
 
-      {/* ── Fixed bottom action bar (replaces system nav) ─────────────── */}
+      {/* ── Fixed bottom action bar ───────────────────────────────────── */}
       <Box sx={{
         position: 'fixed', left: 0, right: 0, bottom: 0, zIndex: 1110,
         bgcolor: '#ffffff', borderTop: '1px solid #e8e8e8',
@@ -206,31 +206,7 @@ function NewBill({ scannedItems, addItemToBill: addItemToBillProp, increaseItemQ
         px: { xs: 1.5, sm: 2 }, pt: 1, pb: 'env(safe-area-inset-bottom, 12px)',
         display: 'flex', flexDirection: 'column', gap: 0.8,
       }}>
-        {/* Row 1: Voice + Scan QR */}
-        <Box sx={{ display: 'flex', gap: 1 }}>
-          <Button
-            fullWidth variant="outlined"
-            startIcon={<MicIcon />}
-            onClick={() => setShowVoice(true)}
-            sx={{ py: 1.3, borderRadius: 2, fontWeight: 700, fontSize: 14,
-              borderColor: '#1976d2', color: '#1976d2',
-              '&:hover': { bgcolor: '#e3f2fd' } }}
-          >
-            Voice
-          </Button>
-          <Button
-            fullWidth variant="contained"
-            startIcon={<QrCodeScannerIcon />}
-            onClick={() => setShowScanner(true)}
-            sx={{ py: 1.3, borderRadius: 2, fontWeight: 700, fontSize: 14,
-              bgcolor: '#005745', '&:hover': { bgcolor: '#004035' },
-              boxShadow: '0 4px 12px rgba(0,87,69,0.3)' }}
-          >
-            Scan QR
-          </Button>
-        </Box>
-
-        {/* Row 2: Search bar */}
+        {/* Row 1: Search bar */}
         <ClickAwayListener onClickAway={() => setOpenSuggestions(false)}>
           <Paper ref={searchRef} sx={{ p: '3px 8px', display: 'flex', alignItems: 'center', borderRadius: 2, border: '1px solid #e7e7e7', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
             <InputBase sx={{ ml: 1, flex: 1, fontSize: 14 }} placeholder="Search by name…" value={searchTerm}
@@ -256,7 +232,7 @@ function NewBill({ scannedItems, addItemToBill: addItemToBillProp, increaseItemQ
           </Paper>
         </ClickAwayListener>
 
-        {/* Row 3: Quick Add + Create Bill */}
+        {/* Row 2: Quick Add + Create Bill */}
         <Box sx={{ display: 'flex', gap: 1 }}>
           <Button variant="contained"
             sx={{ flex: 1, borderRadius: 1.6, bgcolor: '#8d6e63', textTransform: 'uppercase', fontWeight: 600, py: 1.1, '&:hover': { bgcolor: '#6d4c41' } }}
@@ -269,7 +245,32 @@ function NewBill({ scannedItems, addItemToBill: addItemToBillProp, increaseItemQ
             Create Bill
           </Button>
         </Box>
+
+        {/* Row 3: Voice + Scan QR */}
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button
+            fullWidth variant="outlined"
+            startIcon={<MicIcon />}
+            onClick={() => setShowVoice(true)}
+            sx={{ py: 1.3, borderRadius: 2, fontWeight: 700, fontSize: 14,
+              borderColor: '#1976d2', color: '#1976d2',
+              '&:hover': { bgcolor: '#e3f2fd' } }}
+          >
+            Voice
+          </Button>
+          <Button
+            fullWidth variant="contained"
+            startIcon={<QrCodeScannerIcon />}
+            onClick={() => setShowScanner(true)}
+            sx={{ py: 1.3, borderRadius: 2, fontWeight: 700, fontSize: 14,
+              bgcolor: '#005745', '&:hover': { bgcolor: '#004035' },
+              boxShadow: '0 4px 12px rgba(0,87,69,0.3)' }}
+          >
+            Scan QR
+          </Button>
+        </Box>
       </Box>
+
 
       {/* ── QR Scanner modal ─────────────────────────────────────────── */}
       {showScanner && (
