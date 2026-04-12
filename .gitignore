@@ -32,6 +32,7 @@ lerna-debug.log*
 .env.*
 !.env.example
 !.env.sample
+!.env.production
 
 # ----------------------------
 # Temporary files / caches
