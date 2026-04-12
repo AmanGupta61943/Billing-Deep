@@ -36,7 +36,46 @@ function NewBill({ scannedItems, addItemToBill, increaseItemQuantity, decreaseIt
   
   const [isScanning, setIsScanning] = useState(true);
 
+  // ─── Master scan handler ─────────────────────────────────────────────────
+  // Called by BarcodeScanner with the raw decoded text (QR or barcode).
+  //
+  // MODE 1 — QR with embedded JSON (INSTANT, zero API calls):
+  //   QR text → JSON.parse → product object → addItemToBill()
+  //   Same pattern as PhonePe / Paytm — all data lives in the QR.
+  //
+  // MODE 2 — Plain barcode (API fallback):
+  //   Barcode string → GET /api/products/barcode/:code → addItemToBill()
+  // ─────────────────────────────────────────────────────────────────────────
   const handleBarcodeScanResult = async (decodedText) => {
+    console.log('[NewBill] scan received:', decodedText);
+
+    // Try to parse as QR JSON first
+    try {
+      const qrData = JSON.parse(decodedText);
+
+      // Validate the QR contains the minimum product fields
+      const id   = qrData._id || qrData.id;
+      const name = qrData.name;
+      const cost = qrData.cost ?? qrData.price;
+
+      if (id && name && cost != null) {
+        const product = {
+          _id:     id,
+          name,
+          cost:    Number(cost),
+          price:   Number(qrData.price ?? cost),
+          barcode: qrData.barcode || '',
+          quantity: 1,
+        };
+        console.log('[NewBill] ⚡ QR instant add (no API):', product.name);
+        addItemToBill(product);
+        return; // ← done, no network call needed
+      }
+    } catch (_) {
+      // Not JSON — fall through to barcode API lookup
+    }
+
+    // Plain barcode → API fallback
     await handleBarcodeScan(decodedText);
   };
 
@@ -44,28 +83,24 @@ function NewBill({ scannedItems, addItemToBill, increaseItemQuantity, decreaseIt
     setPaymentMethod(event.target.value);
   };
 
-
   const handleBarcodeScan = async (barcode) => {
-    console.log('[NewBill] handleBarcodeScan called with:', barcode);
+    console.log('[NewBill] barcode API lookup:', barcode);
     try {
       const response = await axiosClient.get('/api/products/barcode/' + barcode);
-      const product = response.data;
-      console.log('[NewBill] Product found:', product);
+      const product  = response.data;
+      console.log('[NewBill] product found:', product.name);
       addItemToBill(product);
     } catch (error) {
       const status = error.response?.status;
-      console.error('[NewBill] Scan error — status:', status, '| code:', error.code, '| msg:', error.message);
-
       if (status === 404) {
-        // Product not in stock — redirect to add it
         navigate(`/stock/add?barcode=${barcode}`, { state: { fromNewBill: true } });
       } else if (status === 401) {
         alert('Session expired. Please log in again.');
         navigate('/auth');
       } else if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
-        alert('Backend is starting up (Render cold-start). Wait 15 seconds and scan again.');
+        alert('Backend is starting up (cold-start). Wait ~15 seconds and scan again.');
       } else if (!error.response) {
-        alert(`Cannot reach backend. Check your internet connection.\n(Backend URL: ${process.env.REACT_APP_API_URL || 'http://localhost:5000'})`);
+        alert('Cannot reach backend. Check your connection.');
       } else {
         alert(`Server error (${status}): ${error.response?.data?.message || error.message}`);
       }

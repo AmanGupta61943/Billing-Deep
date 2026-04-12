@@ -1,21 +1,49 @@
 import React, { useEffect, useRef } from 'react';
-import { Html5Qrcode } from 'html5-qrcode';
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import './BarcodeScanner.css';
 
 /**
- * WHY THE FULLSCREEN HAPPENED:
- * html5-qrcode injects a <video> element and wrapper <div>s with their own
- * inline width/height styles (e.g. width: 640px) that overflow any parent
- * container. Without `overflow: hidden` + explicit height on the parent,
- * the browser lets the video expand to its natural camera resolution.
+ * WHY QR IS FASTER THAN BARCODE:
+ * ────────────────────────────────────────────────────────────────────
+ * Barcode:  Scan → API call → DB lookup → response → addItemToBill
+ *           Delay: 300ms–2s depending on network + Render cold-start
  *
- * HOW THIS FIX PREVENTS IT:
- * 1. The outer wrapper has a fixed height (150px) + overflow: hidden → hard clips
- * 2. BarcodeScanner.css overrides the library's injected inline styles
- * 3. aspectRatio: 2.5 + qrbox makes the library request a wide-short video frame
+ * QR:       Scan → JSON.parse(qrText) → addItemToBill
+ *           Delay: ~0ms  (zero network round-trips)
+ *
+ * How it mimics PhonePe / Paytm:
+ *   Those apps embed all payment data inside the QR code itself.
+ *   The app never hits the network — it just reads the QR locally.
+ *   We do the same: embed product data in the QR, parse it instantly.
+ *
+ * Fallback for plain barcodes:
+ *   If the scanned text is NOT valid JSON → treat as a barcode →
+ *   call the backend API as before. This keeps legacy stock compatible.
+ * ────────────────────────────────────────────────────────────────────
+ *
+ * QR DATA FORMAT (generated at stock add/edit time):
+ * {
+ *   "_id": "mongo-object-id",
+ *   "id":   "mongo-object-id",   // alias
+ *   "name": "Product Name",
+ *   "cost": 80,                  // selling price shown on bill
+ *   "price": 100,                // MRP (optional)
+ *   "barcode": "123456789"       // optional
+ * }
  */
 
 const SCANNER_ID = 'bill-barcode-scanner';
+
+// Only scan QR codes + the two most common 1D barcode formats.
+// Restricting formats makes the decoder significantly faster.
+const FORMATS = [
+  Html5QrcodeSupportedFormats.QR_CODE,
+  Html5QrcodeSupportedFormats.EAN_13,
+  Html5QrcodeSupportedFormats.EAN_8,
+  Html5QrcodeSupportedFormats.CODE_128,
+  Html5QrcodeSupportedFormats.UPC_A,
+  Html5QrcodeSupportedFormats.UPC_E,
+];
 
 function BarcodeScanner({ onScan, onClose }) {
   const html5QrRef = useRef(null);
@@ -25,19 +53,20 @@ function BarcodeScanner({ onScan, onClose }) {
   useEffect(() => {
     isMountedRef.current = true;
 
-    // Small delay to ensure the div is committed to DOM
     const timer = setTimeout(async () => {
       if (!document.getElementById(SCANNER_ID)) return;
 
-      const scanner = new Html5Qrcode(SCANNER_ID, { verbose: false });
+      const scanner = new Html5Qrcode(SCANNER_ID, {
+        formatsToSupport: FORMATS,
+        verbose: false,
+      });
       html5QrRef.current = scanner;
 
       try {
         await scanner.start(
           { facingMode: 'environment' },
           {
-            fps: 12,
-            // Wide rectangle — optimised for 1D barcodes
+            fps: 15,
             qrbox: { width: 220, height: 80 },
             aspectRatio: 2.5,
             disableFlip: false,
@@ -46,18 +75,15 @@ function BarcodeScanner({ onScan, onClose }) {
             if (!isMountedRef.current) return;
             const now = Date.now();
             const { text, time } = lastScanRef.current;
-            // Debounce: same code within 2 s is ignored
-            if (decodedText === text && now - time < 2000) return;
+            if (decodedText === text && now - time < 2000) return; // debounce
             lastScanRef.current = { text: decodedText, time: now };
-            console.log('[BarcodeScanner] ✓ decoded:', decodedText);
+            console.log('[Scanner] decoded:', decodedText);
             onScan(decodedText);
           },
-          () => {
-            // Frame-level parse errors are normal (no barcode in frame yet) — suppress
-          }
+          () => {} // suppress per-frame parse errors
         );
       } catch (err) {
-        console.error('[BarcodeScanner] start() failed:', err);
+        console.error('[Scanner] start() failed:', err);
       }
     }, 120);
 
@@ -77,23 +103,19 @@ function BarcodeScanner({ onScan, onClose }) {
 
   return (
     <div className="bs-wrapper">
-      {/* The library mounts the <video> inside this div */}
       <div id={SCANNER_ID} className="bs-viewport" />
 
-      {/* Yellow scan-line guide overlay */}
+      {/* Scan-line overlay */}
       <div className="bs-overlay" aria-hidden="true">
         <div className="bs-scanline" />
       </div>
 
-      {/* Hint */}
-      <div className="bs-hint">Align barcode in the box</div>
+      <div className="bs-hint">Align QR / barcode inside the box</div>
 
-      {/* Close button */}
       <button
         className="bs-close"
         onClick={onClose}
         aria-label="Close scanner"
-        title="Close scanner"
       >
         ✕
       </button>

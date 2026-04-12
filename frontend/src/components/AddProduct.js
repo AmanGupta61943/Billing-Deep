@@ -12,8 +12,11 @@ import {
   Stack,
 } from '@mui/material';
 import AutorenewIcon from '@mui/icons-material/Autorenew';
+import QrCode2Icon from '@mui/icons-material/QrCode2';
+import PrintIcon from '@mui/icons-material/Print';
 import axiosClient from '../api/axiosClient';
 import { v4 as uuidv4 } from 'uuid';
+import { QRCodeSVG } from 'qrcode.react';
 
 function generateRandomBarcode() {
   let s = '';
@@ -48,6 +51,8 @@ function AddProduct({ addItemToBill }) {
   const [addToStock, setAddToStock] = useState(true);
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [savedProduct, setSavedProduct] = useState(null); // holds saved product for QR display
+  const qrPrintRef = React.useRef();
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -95,9 +100,12 @@ function AddProduct({ addItemToBill }) {
     try {
       if (addToStock) {
         const response = await axiosClient.post('/api/products', productData);
+        const saved = response.data;
+        setSavedProduct(saved); // show QR
         if (typeof addItemToBill === 'function') {
-          addItemToBill(response.data);
+          addItemToBill(saved);
         }
+        // Don't navigate away — let user see and print the QR first
       } else {
         const tempProduct = {
           ...productData,
@@ -107,11 +115,11 @@ function AddProduct({ addItemToBill }) {
         if (typeof addItemToBill === 'function') {
           addItemToBill(tempProduct);
         }
-      }
-      if (location.state?.fromNewBill) {
-        navigate('/new-bill');
-      } else {
-        navigate(-1);
+        if (location.state?.fromNewBill) {
+          navigate('/new-bill');
+        } else {
+          navigate(-1);
+        }
       }
     } catch (err) {
       const status = err.response?.status;
@@ -306,6 +314,83 @@ function AddProduct({ addItemToBill }) {
           </Stack>
         </form>
       </Paper>
+
+      {/* ── QR Code Card — shown after product is saved ───────────────── */}
+      {savedProduct && (
+        <Paper
+          elevation={0}
+          sx={{
+            mt: 2,
+            p: { xs: 2, sm: 3 },
+            borderRadius: 3,
+            border: '2px solid #4caf50',
+            boxShadow: '0 8px 28px rgba(76,175,80,0.12)',
+            textAlign: 'center',
+          }}
+        >
+          <Typography variant="subtitle1" sx={{ fontWeight: 700, color: '#2e7d32', mb: 0.5, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.8 }}>
+            <QrCode2Icon /> Product saved! QR Code ready
+          </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+            Print this QR and stick it on the product. Scanning it instantly adds it to any bill — no internet needed.
+          </Typography>
+
+          {/* Printable QR area */}
+          <Box
+            ref={qrPrintRef}
+            sx={{
+              display: 'inline-flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              p: 2,
+              bgcolor: '#fff',
+              border: '1px solid #e0e0e0',
+              borderRadius: 2,
+            }}
+          >
+            <QRCodeSVG
+              value={JSON.stringify({
+                _id:     savedProduct._id,
+                id:      savedProduct._id,
+                name:    savedProduct.name,
+                cost:    savedProduct.cost,
+                price:   savedProduct.price ?? savedProduct.cost,
+                barcode: savedProduct.barcode || '',
+              })}
+              size={180}
+              level="M"
+              includeMargin={false}
+            />
+            <Typography variant="caption" sx={{ mt: 1, fontWeight: 600 }}>
+              {savedProduct.name}
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              ₹{savedProduct.cost} &nbsp;|&nbsp; {savedProduct.barcode || 'No barcode'}
+            </Typography>
+          </Box>
+
+          <Stack direction="row" spacing={1.5} justifyContent="center" sx={{ mt: 2 }}>
+            <Button
+              variant="outlined"
+              startIcon={<PrintIcon />}
+              onClick={() => window.print()}
+              sx={{ textTransform: 'none', borderColor: '#4caf50', color: '#2e7d32' }}
+            >
+              Print QR
+            </Button>
+            <Button
+              variant="contained"
+              sx={{ textTransform: 'none', bgcolor: '#5d4037', '&:hover': { bgcolor: '#4e342e' } }}
+              onClick={() => {
+                if (location.state?.fromNewBill) navigate('/new-bill');
+                else navigate(-1);
+              }}
+            >
+              Done
+            </Button>
+          </Stack>
+        </Paper>
+      )}
     </Container>
   );
 }
