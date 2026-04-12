@@ -6,7 +6,7 @@ import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import RemoveIcon from '@mui/icons-material/Remove';
 import CloseIcon from '@mui/icons-material/Close';
-import { useZxing } from 'react-zxing';
+import { Html5Qrcode } from 'html5-qrcode';
 import { useNavigate } from 'react-router-dom';
 import axiosClient from '../api/axiosClient';
 import Popper from '@mui/material/Popper';
@@ -38,25 +38,37 @@ function NewBill({ scannedItems, addItemToBill, increaseItemQuantity, decreaseIt
   const [isScanning, setIsScanning] = useState(true);
   const [lastScan, setLastScan] = useState({ text: '', time: 0 });
 
-  const { ref: zxingRef } = useZxing({
-    paused: !isScanning,
-    onDecodeResult(result) {
-      if (result) {
-        handleScan({ text: result.getText() });
-      }
-    },
-  });
+  const handleScanRef = React.useRef();
 
-  const handleScan = async (result, error) => {
-    if (!!result) {
-      const scannedText = result?.text;
-      const now = Date.now();
-      if (scannedText && (scannedText !== lastScan.text || now - lastScan.time > 2000)) {
-        setLastScan({ text: scannedText, time: now });
-        await handleBarcodeScan(scannedText);
-      }
+  handleScanRef.current = async (scannedText) => {
+    const now = Date.now();
+    if (scannedText && (scannedText !== lastScan.text || now - lastScan.time > 2000)) {
+      setLastScan({ text: scannedText, time: now });
+      await handleBarcodeScan(scannedText);
     }
   };
+
+  useEffect(() => {
+    let html5QrCode;
+    if (isScanning) {
+      html5QrCode = new Html5Qrcode("scanner-container");
+      html5QrCode.start(
+        { facingMode: "environment" },
+        { fps: 15 },
+        (decodedText) => {
+          if (handleScanRef.current) {
+            handleScanRef.current(decodedText);
+          }
+        },
+        () => {} // ignores parsing errors
+      ).catch(err => console.log("Scanner start failed:", err));
+    }
+    return () => {
+      if (html5QrCode && html5QrCode.isScanning) {
+        html5QrCode.stop().then(() => html5QrCode.clear()).catch(console.error);
+      }
+    };
+  }, [isScanning]);
 
   const handlePaymentMethodChange = (event) => {
     setPaymentMethod(event.target.value);
@@ -280,12 +292,10 @@ function NewBill({ scannedItems, addItemToBill, increaseItemQuantity, decreaseIt
           }}
         >
           {isScanning ? (
-            <Box sx={{ position: 'relative', width: '100%', height: 130, bgcolor: '#000', borderRadius: 1.8, overflow: 'hidden' }}>
-              <video
-                ref={zxingRef}
-                muted
-                playsInline
-                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+            <Box sx={{ position: 'relative', width: '100%', height: 160, bgcolor: '#000', borderRadius: 1.8, overflow: 'hidden' }}>
+              <div
+                id="scanner-container"
+                style={{ width: '100%', height: '100%', overflow: 'hidden' }}
               />
               <IconButton
                 size="small"

@@ -310,9 +310,9 @@ function StockManagement() {
           />
           <Typography variant="subtitle1" gutterBottom>Enter Barcode Number</Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-             <IconButton onClick={() => setShowScanner(!showScanner)} size="large" sx={{ mr: 1 }}>
-                <QrCodeScannerIcon />
-              </IconButton>
+            <Box sx={{ mr: 1, color: 'primary.main', display: 'flex', alignItems: 'center' }}>
+               <QrCodeScannerIcon sx={{ fontSize: 40 }} />
+            </Box>
             <TextField
               margin="dense"
               name="barcode"
@@ -323,19 +323,21 @@ function StockManagement() {
               value={formData.barcode}
               onChange={handleChange}
               sx={{ flexGrow: 1 }}
-               InputProps={{
-                // No end adornment here, auto-generate buttons are moved below
-               }}
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton onClick={() => setShowScanner(!showScanner)} edge="end" aria-label="scan barcode">
+                      <QrCodeScannerIcon />
+                    </IconButton>
+                  </InputAdornment>
+                )
+              }}
             />
-             {/* Add button next to barcode - functionality to be confirmed */}
-             {/* <Button variant="contained" size="small" sx={{ ml: 1 }}>Add</Button> */}
           </Box>
            {/* Display entered barcode below input */}
            {formData.barcode && (
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2, p: 1, backgroundColor: '#f0f0f0', borderRadius: '4px' }}>
-              <Typography variant="body1" sx={{ flexGrow: 1, fontWeight: 'bold' }}>{formData.barcode}</Typography>
-              {/* Three-dots icon - functionality to be confirmed */}
-              {/* <MoreVertIcon /> */}
+            <Box sx={{ display: 'flex', justifyContent: 'center', mt: 1, mb: 2, p: 2, backgroundColor: '#fafbfc', borderRadius: 2, border: '1px solid #ccc' }}>
+              <Barcode value={formData.barcode} width={1.5} height={50} fontSize={12} />
             </Box>
            )}
 
