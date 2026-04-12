@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
@@ -7,13 +7,28 @@ import {
   Button,
   Typography,
   Paper,
-  Grid,
   Checkbox,
   FormControlLabel,
-  // Import other necessary MUI components if needed
+  Stack,
 } from '@mui/material';
+import AutorenewIcon from '@mui/icons-material/Autorenew';
 import axiosClient from '../api/axiosClient';
 import { v4 as uuidv4 } from 'uuid';
+
+function generateRandomBarcode() {
+  let s = '';
+  if (typeof crypto !== 'undefined' && crypto.getRandomValues) {
+    const buf = new Uint8Array(8);
+    crypto.getRandomValues(buf);
+    for (let i = 0; i < buf.length; i++) {
+      s += (buf[i] % 10).toString();
+    }
+  }
+  while (s.length < 12) {
+    s += Math.floor(Math.random() * 10).toString();
+  }
+  return s.slice(0, 12);
+}
 
 function AddProduct({ addItemToBill }) {
   const navigate = useNavigate();
@@ -26,19 +41,22 @@ function AddProduct({ addItemToBill }) {
     barcode: initialBarcode,
     quantity: '',
     purchasePrice: '',
-    retail: '', // Mapping to 'cost' in backend
-    minimumQuantity: ''
+    retail: '',
+    minimumQuantity: '',
   });
 
   const [addToStock, setAddToStock] = useState(true);
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleApplyGeneratedBarcode = () => {
+    setFormData((prev) => ({ ...prev, barcode: generateRandomBarcode() }));
+    setError('');
   };
 
   const handleCheckboxChange = (event) => {
@@ -49,15 +67,14 @@ function AddProduct({ addItemToBill }) {
     e.preventDefault();
     setError('');
 
-    // Validate form data
-    let missingFields = [];
-    if (!formData.name) missingFields.push('Name');
-    if (formData.quantity === '') missingFields.push('Quantity'); // quantity can be 0, so check for empty string
-    if (!formData.retail) missingFields.push('Retail Price');
+    const missingFields = [];
+    if (!formData.name?.trim()) missingFields.push('Name');
+    if (formData.quantity === '' || formData.quantity === null) missingFields.push('Quantity');
+    if (!formData.retail && formData.retail !== 0) missingFields.push('Retail Price');
 
     if (addToStock) {
-      if (!formData.barcode) missingFields.push('Barcode');
-      if (!formData.purchasePrice) missingFields.push('Purchase Price');
+      if (!formData.barcode?.trim()) missingFields.push('Barcode');
+      if (formData.purchasePrice === '' || formData.purchasePrice === null) missingFields.push('Purchase Price');
     }
 
     if (missingFields.length > 0) {
@@ -66,193 +83,223 @@ function AddProduct({ addItemToBill }) {
     }
 
     const productData = {
-      name: formData.name,
-      barcode: formData.barcode || '',
+      name: formData.name.trim(),
+      barcode: formData.barcode?.trim() || '',
       quantity: Number(formData.quantity),
       purchasePrice: Number(formData.purchasePrice),
-      cost: Number(formData.retail), // Mapping Retail Price to cost
-      minimumQuantity: Number(formData.minimumQuantity) || 0
+      cost: Number(formData.retail),
+      minimumQuantity: Number(formData.minimumQuantity) || 0,
     };
 
+    setSubmitting(true);
     try {
       if (addToStock) {
-        console.log('Submitting product data to stock:', productData); // Debug log
         const response = await axiosClient.post('/api/products', productData);
-        console.log('Product added to stock successfully:', response.data); // Debug log
-        addItemToBill(response.data); // Add item from backend response to bill (includes _id)
+        if (typeof addItemToBill === 'function') {
+          addItemToBill(response.data);
+        }
       } else {
-        console.log('Adding product only to scanned items:', productData); // Debug log
-        // Create a temporary product object with a client-side ID and include retail price as 'price'
-        const tempProduct = { 
-          ...productData, 
+        const tempProduct = {
+          ...productData,
           _id: uuidv4(),
-          price: Number(formData.retail) // Add retail price as 'price' for temporary items
+          price: Number(formData.retail),
         };
-        console.log('Adding temporary product to bill (before addItemToBill):', tempProduct); // Added log
-        addItemToBill(tempProduct); // Add temporary item to bill
+        if (typeof addItemToBill === 'function') {
+          addItemToBill(tempProduct);
+        }
       }
-
-      navigate('/new-bill'); // Navigate back to the new bill page
-
+      navigate('/new-bill');
     } catch (err) {
-      console.error('Error adding product:', err);
-      console.error('Error response:', err.response?.data); // Debug log
-      setError(err.response?.data?.message || 'Error adding product. Please try again.');
+      const status = err.response?.status;
+      const msg = err.response?.data?.message;
+      if (status === 401) {
+        setError('Session expired or not signed in. Please sign in again.');
+      } else if (status === 409) {
+        setError(msg || 'This barcode is already used. Generate a new one or change the barcode.');
+      } else if (err.code === 'ERR_NETWORK') {
+        setError('Cannot reach the server. Start the backend (port 5000) or check REACT_APP_API_URL.');
+      } else {
+        setError(msg || 'Error adding product. Please try again.');
+      }
+    } finally {
+      setSubmitting(false);
     }
   };
 
   return (
-    <Container maxWidth="sm" sx={{ mt: 2, mb: 4 }}>
-      <Paper sx={{ p: 3 }}>
-        <Typography variant="h5" gutterBottom>
+    <Container
+      maxWidth="sm"
+      disableGutters
+      sx={{
+        px: { xs: 1.5, sm: 2 },
+        pt: 1,
+        pb: 22,
+      }}
+    >
+      <Paper
+        elevation={0}
+        sx={{
+          p: { xs: 2, sm: 3 },
+          borderRadius: 3,
+          border: '1px solid #ebebeb',
+          boxShadow: '0 8px 28px rgba(0,0,0,0.06)',
+        }}
+      >
+        <Typography
+          variant="h5"
+          sx={{
+            fontWeight: 700,
+            mb: 0.5,
+            fontFamily: '"Poppins", "Inter", system-ui, sans-serif',
+          }}
+        >
           Add New Product
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          Fill details below. Use generate for a unique numeric barcode.
         </Typography>
 
         {error && (
-          <Typography color="error" sx={{ mb: 2 }}>
+          <Typography
+            color="error"
+            sx={{
+              mb: 2,
+              p: 1.25,
+              borderRadius: 1.5,
+              bgcolor: 'rgba(211, 47, 47, 0.08)',
+              fontSize: 14,
+            }}
+          >
             {error}
           </Typography>
         )}
 
         <form onSubmit={handleSubmit}>
-          <Grid container spacing={2}>
-            <Grid item xs={12} sx={{ mb: 2 }}>
+          <Stack spacing={2.25}>
+            <TextField
+              fullWidth
+              label="Product Name"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              required
+              size="small"
+            />
+
+            <Box>
               <TextField
+                name="barcode"
+                label="Barcode"
+                type="text"
                 fullWidth
-                label="Product Name"
-                name="name"
-                value={formData.name}
+                size="small"
+                value={formData.barcode}
                 onChange={handleChange}
-                required
+                required={addToStock}
               />
-            </Grid>
+              <Button
+                type="button"
+                variant="outlined"
+                fullWidth
+                size="small"
+                onClick={handleApplyGeneratedBarcode}
+                startIcon={<AutorenewIcon sx={{ fontSize: 18 }} />}
+                sx={{
+                  mt: 1,
+                  textTransform: 'none',
+                  borderColor: '#5d4037',
+                  color: '#5d4037',
+                  py: 0.75,
+                  '&:hover': { borderColor: '#4e342e', bgcolor: 'rgba(93,64,55,0.06)' },
+                }}
+              >
+                Random generate barcode
+              </Button>
+              {formData.barcode ? (
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.75 }}>
+                  Preview: <strong>{formData.barcode}</strong>
+                </Typography>
+              ) : null}
+            </Box>
 
-            {/* Barcode Section based on image */}
-            <Grid item xs={12} sx={{ mb: 2 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                   {/* Scan Icon - Placeholder */}
-                   {/* <IconButton size="large" sx={{ mr: 1 }}>
-                      <QrCodeScannerIcon />
-                    </IconButton> */}
-                  <TextField
-                    name="barcode"
-                    label="Barcode"
-                    type="text"
-                    fullWidth
-                    variant="outlined"
-                    value={formData.barcode}
-                    onChange={handleChange}
-                    required={addToStock}
-                    sx={{ flexGrow: 1 }}
-                    InputProps={{
-                      // No end adornment here
-                    }}
-                  />
-                   {/* Add button next to barcode - functionality to be confirmed */}
-                   {/* <Button variant="contained" size="small" sx={{ ml: 1 }}>Add</Button> */}
-                </Box>
-                 {/* Display entered barcode below input */}
-                 {formData.barcode && (
-                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 0, p: 1, backgroundColor: '#f0f0f0', borderRadius: '4px' }}>
-                    <Typography variant="body1" sx={{ flexGrow: 1, fontWeight: 'bold' }}>{formData.barcode}</Typography>
-                    {/* Three-dots icon - functionality to be confirmed */}
-                    {/* <MoreVertIcon /> */}
-                  </Box>
-                 )}
-                 {/* Auto Generate Buttons */}
-                <Box sx={{ display: 'flex', justifyContent: 'space-around', mt: 1, mb: 0 }}>
-                  {/* These functions are not in AddProduct.js, might need to pass them or implement here */}
-                  {/* <Button onClick={handleAutoGenerateBarcode} variant="outlined" sx={{ flexGrow: 1, mr: 1 }}>Auto Generate Barcode</Button> */}
-                  {/* <Button onClick={handleAutoGenerate4Digit} variant="outlined" sx={{ flexGrow: 1, ml: 1 }}>Auto Generate 4 Digit Code</Button> */}
-                </Box>
-            </Grid>
-            {/* End Barcode Section */}
-
-            <Grid item xs={12} sm={6} sx={{ mb: 2 }}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
               <TextField
                 fullWidth
                 label="Quantity"
                 name="quantity"
                 type="number"
+                size="small"
+                inputProps={{ min: 0 }}
                 value={formData.quantity}
                 onChange={handleChange}
                 required
               />
-            </Grid>
-
-            {/* Retail Price field - always visible */}
-            <Grid item xs={12} sm={6} sx={{ mb: 2 }}>
               <TextField
                 fullWidth
-                label="Retail Price (₹)" // Mapping to cost in backend
+                label="Retail Price (₹)"
                 name="retail"
                 type="number"
+                size="small"
+                inputProps={{ min: 0, step: '0.01' }}
                 value={formData.retail}
                 onChange={handleChange}
                 required
               />
-            </Grid>
+            </Stack>
 
-            {/* Conditional fields for Add to Stock */}
             {addToStock && (
-              <>
-                <Grid item xs={12} sm={6} sx={{ mb: 2 }}>
-                  <TextField
-                    fullWidth
-                    label="Purchase Price (₹)"
-                    name="purchasePrice"
-                    type="number"
-                    value={formData.purchasePrice}
-                    onChange={handleChange}
-                    required
-                  />
-                </Grid>
-
-                <Grid item xs={12} sm={6} sx={{ mb: 2 }}>
-                  <TextField
-                    fullWidth
-                    label="Minimum Quantity"
-                    name="minimumQuantity"
-                    type="number"
-                    value={formData.minimumQuantity}
-                    onChange={handleChange}
-                  />
-                </Grid>
-              </>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                <TextField
+                  fullWidth
+                  label="Purchase Price (₹)"
+                  name="purchasePrice"
+                  type="number"
+                  size="small"
+                  inputProps={{ min: 0, step: '0.01' }}
+                  value={formData.purchasePrice}
+                  onChange={handleChange}
+                  required
+                />
+                <TextField
+                  fullWidth
+                  label="Minimum Quantity"
+                  name="minimumQuantity"
+                  type="number"
+                  size="small"
+                  inputProps={{ min: 0 }}
+                  value={formData.minimumQuantity}
+                  onChange={handleChange}
+                />
+              </Stack>
             )}
 
-            <Grid item xs={12} sx={{ mb: 2 }}>
-              <FormControlLabel
-                control={
-                  <Checkbox
-                    checked={addToStock}
-                    onChange={handleCheckboxChange}
-                    name="addToStock"
-                    color="primary"
-                  />
-                }
-                label="Add to Stock Management"
-              />
-            </Grid>
+            <FormControlLabel
+              control={
+                <Checkbox checked={addToStock} onChange={handleCheckboxChange} name="addToStock" color="primary" />
+              }
+              label="Add to Stock Management"
+            />
 
-            <Grid item xs={12}>
-              <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
-                <Button
-                  variant="outlined"
-                  onClick={() => navigate('/new-bill')}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  variant="contained"
-                  color="primary"
-                >
-                  Add Product
-                </Button>
-              </Box>
-            </Grid>
-          </Grid>
+            <Stack direction="row" spacing={1.5} justifyContent="flex-end" sx={{ pt: 1 }}>
+              <Button variant="outlined" onClick={() => navigate(-1)} disabled={submitting} sx={{ textTransform: 'none' }}>
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                variant="contained"
+                disabled={submitting}
+                sx={{
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  px: 2.5,
+                  bgcolor: '#5d4037',
+                  '&:hover': { bgcolor: '#4e342e' },
+                }}
+              >
+                {submitting ? 'Saving…' : 'Add Product'}
+              </Button>
+            </Stack>
+          </Stack>
         </form>
       </Paper>
     </Container>

@@ -47,7 +47,7 @@ router.post('/signup', async (req, res) => {
       });
     }
 
-    const existingUser = await User.findOne({ email });
+    const existingUser = await User.findOne({ email: emailStr });
     if (existingUser) {
       return res.status(409).json({ message: 'Email is already registered.' });
     }
@@ -106,7 +106,8 @@ router.post('/login', async (req, res) => {
       });
     }
 
-    const user = await User.findOne({ email });
+    const emailStr = String(email).trim().toLowerCase();
+    const user = await User.findOne({ email: emailStr });
     if (!user) {
       return res.status(401).json({ message: 'Invalid email or password.' });
     }

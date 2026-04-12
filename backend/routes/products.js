@@ -58,6 +58,20 @@ router.get('/search', async (req, res) => {
   }
 });
 
+// Must be registered before /:id so "barcode" is not captured as an id
+router.get('/barcode/:barcode', async (req, res) => {
+  try {
+    const product = await Product.findOne({ barcode: req.params.barcode });
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+    res.json(product);
+  } catch (error) {
+    console.error('Error finding product by barcode:', error);
+    res.status(500).json({ message: 'Error finding product' });
+  }
+});
+
 // Get single product
 router.get('/:id', async (req, res) => {
   try {
@@ -76,27 +90,47 @@ router.get('/:id', async (req, res) => {
 router.post('/', async (req, res) => {
   try {
     const { name, barcode, quantity, purchasePrice, cost, minimumQuantity } = req.body;
-    
-    // Validate required fields
-    if (!name || quantity === undefined || !purchasePrice || !cost) { // quantity can be 0, so check for undefined
-      return res.status(400).json({ message: 'Missing required fields: name, quantity, purchasePrice, cost' });
+
+    const qty = quantity === '' || quantity === undefined ? NaN : Number(quantity);
+    const purchase = purchasePrice === '' || purchasePrice === undefined ? NaN : Number(purchasePrice);
+    const costNum = cost === '' || cost === undefined ? NaN : Number(cost);
+
+    if (!name || String(name).trim() === '') {
+      return res.status(400).json({ message: 'Product name is required.' });
+    }
+    if (Number.isNaN(qty) || qty < 0) {
+      return res.status(400).json({ message: 'Valid quantity is required (0 or greater).' });
+    }
+    if (Number.isNaN(purchase) || purchase < 0) {
+      return res.status(400).json({ message: 'Valid purchase price is required.' });
+    }
+    if (Number.isNaN(costNum) || costNum < 0) {
+      return res.status(400).json({ message: 'Valid retail / cost price is required.' });
     }
 
     const product = new Product({
-      name,
-      barcode,
-      quantity,
-      purchasePrice,
-      cost,
-      minimumQuantity: minimumQuantity !== undefined ? minimumQuantity : 0, // Use provided minimumQuantity or default to 0
-      lastUpdated: new Date()
+      name: String(name).trim(),
+      barcode: barcode != null && String(barcode).trim() !== '' ? String(barcode).trim() : undefined,
+      quantity: qty,
+      purchasePrice: purchase,
+      cost: costNum,
+      minimumQuantity:
+        minimumQuantity === '' || minimumQuantity === undefined
+          ? 0
+          : Math.max(0, Number(minimumQuantity) || 0),
+      lastUpdated: new Date(),
     });
 
     const savedProduct = await product.save();
     res.status(201).json(savedProduct);
   } catch (err) {
     console.error('Error creating product:', err);
-    res.status(400).json({ message: err.message });
+    if (err && err.code === 11000) {
+      return res.status(409).json({
+        message: 'A product with this barcode already exists. Use a different barcode or generate a new one.',
+      });
+    }
+    res.status(400).json({ message: err.message || 'Could not create product.' });
   }
 });
 
@@ -174,20 +208,6 @@ router.patch('/:id/stock', async (req, res) => {
   } catch (err) {
     console.error('Error updating stock:', err);
     res.status(400).json({ message: err.message });
-  }
-});
-
-// Get product by barcode
-router.get('/barcode/:barcode', async (req, res) => {
-  try {
-    const product = await Product.findOne({ barcode: req.params.barcode });
-    if (!product) {
-      return res.status(404).json({ message: 'Product not found' });
-    }
-    res.json(product);
-  } catch (error) {
-    console.error('Error finding product by barcode:', error);
-    res.status(500).json({ message: 'Error finding product' });
   }
 });
 
