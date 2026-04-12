@@ -33,25 +33,29 @@ const SignInPage = () => {
   }, [navigate]);
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setLoading(true);
+  e.preventDefault();
+  setError('');
+  setLoading(true);
 
-    try {
-      await axiosClient.post('/auth/signup', { name, email, password });
-      const { token, user } = response.data;
+  try {
+    const response = await axiosClient.post('/auth/login', {
+      email,
+      password
+    });
 
-      saveAuth({ token, user, remember: rememberMe });
+    const { token, user } = response.data;
 
-      navigate('/dashboard');
-    } catch (err) {
-      const message =
-        err.response?.data?.message || 'Unable to sign in. Please try again.';
-      setError(message);
-    } finally {
-      setLoading(false);
-    }
-  };
+    saveAuth({ token, user, remember: rememberMe });
+
+    navigate('/dashboard');
+  } catch (err) {
+    const message =
+      err.response?.data?.message || 'Unable to sign in. Please try again.';
+    setError(message);
+  } finally {
+    setLoading(false);
+  }
+};
 
   return (
     <Box
