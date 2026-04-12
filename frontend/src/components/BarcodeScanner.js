@@ -1,140 +1,103 @@
 import React, { useEffect, useRef } from 'react';
 import { Html5Qrcode } from 'html5-qrcode';
-import { Box, IconButton, Typography } from '@mui/material';
-import CloseIcon from '@mui/icons-material/Close';
+import './BarcodeScanner.css';
+
+/**
+ * WHY THE FULLSCREEN HAPPENED:
+ * html5-qrcode injects a <video> element and wrapper <div>s with their own
+ * inline width/height styles (e.g. width: 640px) that overflow any parent
+ * container. Without `overflow: hidden` + explicit height on the parent,
+ * the browser lets the video expand to its natural camera resolution.
+ *
+ * HOW THIS FIX PREVENTS IT:
+ * 1. The outer wrapper has a fixed height (150px) + overflow: hidden → hard clips
+ * 2. BarcodeScanner.css overrides the library's injected inline styles
+ * 3. aspectRatio: 2.5 + qrbox makes the library request a wide-short video frame
+ */
 
 const SCANNER_ID = 'bill-barcode-scanner';
 
 function BarcodeScanner({ onScan, onClose }) {
-  const html5QrCodeRef = useRef(null);
+  const html5QrRef = useRef(null);
   const lastScanRef = useRef({ text: '', time: 0 });
+  const isMountedRef = useRef(true);
 
   useEffect(() => {
-    // Wait one tick for the div to be in the DOM
-    const timerId = setTimeout(() => {
-      const el = document.getElementById(SCANNER_ID);
-      if (!el) {
-        console.error('[BarcodeScanner] Container div not found in DOM');
-        return;
+    isMountedRef.current = true;
+
+    // Small delay to ensure the div is committed to DOM
+    const timer = setTimeout(async () => {
+      if (!document.getElementById(SCANNER_ID)) return;
+
+      const scanner = new Html5Qrcode(SCANNER_ID, { verbose: false });
+      html5QrRef.current = scanner;
+
+      try {
+        await scanner.start(
+          { facingMode: 'environment' },
+          {
+            fps: 12,
+            // Wide rectangle — optimised for 1D barcodes
+            qrbox: { width: 220, height: 80 },
+            aspectRatio: 2.5,
+            disableFlip: false,
+          },
+          (decodedText) => {
+            if (!isMountedRef.current) return;
+            const now = Date.now();
+            const { text, time } = lastScanRef.current;
+            // Debounce: same code within 2 s is ignored
+            if (decodedText === text && now - time < 2000) return;
+            lastScanRef.current = { text: decodedText, time: now };
+            console.log('[BarcodeScanner] ✓ decoded:', decodedText);
+            onScan(decodedText);
+          },
+          () => {
+            // Frame-level parse errors are normal (no barcode in frame yet) — suppress
+          }
+        );
+      } catch (err) {
+        console.error('[BarcodeScanner] start() failed:', err);
       }
-
-      const scanner = new Html5Qrcode(SCANNER_ID);
-      html5QrCodeRef.current = scanner;
-
-      scanner.start(
-        { facingMode: 'environment' },
-        {
-          fps: 10,
-          qrbox: { width: 250, height: 100 },  // wide box for 1D barcodes
-          aspectRatio: 2.25,
-        },
-        (decodedText) => {
-          const now = Date.now();
-          const last = lastScanRef.current;
-
-          // Debounce: ignore same barcode scanned within 2 seconds
-          if (decodedText === last.text && now - last.time < 2000) return;
-
-          lastScanRef.current = { text: decodedText, time: now };
-          console.log('[BarcodeScanner] Scanned:', decodedText);
-          onScan(decodedText);
-        },
-        () => {
-          // Suppress frame-level decode errors — these are normal when no barcode is in frame
-        }
-      ).catch((err) => {
-        console.error('[BarcodeScanner] Failed to start scanner:', err);
-      });
-    }, 100);
+    }, 120);
 
     return () => {
-      clearTimeout(timerId);
-      const scanner = html5QrCodeRef.current;
+      clearTimeout(timer);
+      isMountedRef.current = false;
+      const scanner = html5QrRef.current;
       if (scanner) {
-        scanner.isScanning &&
-          scanner.stop()
-            .then(() => scanner.clear())
-            .catch((e) => console.warn('[BarcodeScanner] Stop error:', e));
-        html5QrCodeRef.current = null;
+        (scanner.isScanning
+          ? scanner.stop().then(() => scanner.clear())
+          : Promise.resolve()
+        ).catch(() => {});
+        html5QrRef.current = null;
       }
     };
-  }, []); // runs once on mount
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <Box
-      sx={{
-        position: 'relative',
-        width: '100%',
-        bgcolor: '#111',
-        borderRadius: 2,
-        overflow: 'hidden',
-      }}
-    >
-      {/* Scanner viewport */}
-      <div
-        id={SCANNER_ID}
-        style={{ width: '100%' }}
-      />
+    <div className="bs-wrapper">
+      {/* The library mounts the <video> inside this div */}
+      <div id={SCANNER_ID} className="bs-viewport" />
 
-      {/* Scan guide overlay */}
-      <Box
-        sx={{
-          position: 'absolute',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: '72%',
-          height: 56,
-          border: '2px solid #ffeb3b',
-          borderRadius: 1,
-          pointerEvents: 'none',
-          zIndex: 10,
-          '&::before, &::after': {
-            content: '""',
-            position: 'absolute',
-            width: 18,
-            height: 18,
-            border: '3px solid #ffeb3b',
-          },
-          '&::before': { top: -3, left: -3, borderRight: 'none', borderBottom: 'none' },
-          '&::after': { bottom: -3, right: -3, borderLeft: 'none', borderTop: 'none' },
-        }}
-      />
+      {/* Yellow scan-line guide overlay */}
+      <div className="bs-overlay" aria-hidden="true">
+        <div className="bs-scanline" />
+      </div>
 
-      {/* Hint text */}
-      <Box
-        sx={{
-          position: 'absolute',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          bgcolor: 'rgba(0,0,0,0.55)',
-          py: 0.5,
-          textAlign: 'center',
-          zIndex: 10,
-        }}
-      >
-        <Typography variant="caption" sx={{ color: '#ffe', letterSpacing: 0.4 }}>
-          Align barcode inside the box
-        </Typography>
-      </Box>
+      {/* Hint */}
+      <div className="bs-hint">Align barcode in the box</div>
 
       {/* Close button */}
-      <IconButton
-        size="small"
+      <button
+        className="bs-close"
         onClick={onClose}
-        sx={{
-          position: 'absolute',
-          top: 6,
-          right: 6,
-          zIndex: 20,
-          bgcolor: 'rgba(255,255,255,0.75)',
-          '&:hover': { bgcolor: 'rgba(255,255,255,0.95)' },
-        }}
+        aria-label="Close scanner"
+        title="Close scanner"
       >
-        <CloseIcon fontSize="small" />
-      </IconButton>
-    </Box>
+        ✕
+      </button>
+    </div>
   );
 }
 
