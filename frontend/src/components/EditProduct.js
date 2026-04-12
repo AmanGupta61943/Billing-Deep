@@ -119,16 +119,15 @@ function EditProduct() {
     setFormData({ ...formData, barcode: random4Digit });
     setDisplayBarcodeValue(random4Digit);
   };
-  const handleScan = (result) => {
-    if (result) {
-      setFormData({ ...formData, barcode: result });
-      setDisplayBarcodeValue(result);
-      setShowScanner(false);
+  const handleScan = (result, error) => {
+    if (!!result) {
+      const scannedText = result?.text;
+      if (scannedText) {
+        setFormData({ ...formData, barcode: scannedText });
+        setDisplayBarcodeValue(scannedText);
+        setShowScanner(false);
+      }
     }
-  };
-  const handleError = (err) => {
-    setError('QR/Barcode scan error: ' + err);
-    setShowScanner(false);
   };
 
   const handleSubmit = async (e) => {
@@ -240,9 +239,8 @@ function EditProduct() {
         {showScanner && (
           <Box sx={{ mb: 2 }}>
             <QrReader
-              delay={300}
-              onError={handleError}
-              onScan={handleScan}
+              onResult={handleScan}
+              constraints={{ facingMode: 'environment' }}
               style={{ width: '100%' }}
             />
           </Box>

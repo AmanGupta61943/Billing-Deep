@@ -6,7 +6,7 @@ import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import RemoveIcon from '@mui/icons-material/Remove';
 import CloseIcon from '@mui/icons-material/Close';
-import { QrReader } from 'react-qr-reader';
+import { useZxing } from 'react-zxing';
 import { useNavigate } from 'react-router-dom';
 import axiosClient from '../api/axiosClient';
 import Popper from '@mui/material/Popper';
@@ -37,6 +37,15 @@ function NewBill({ scannedItems, addItemToBill, increaseItemQuantity, decreaseIt
   
   const [isScanning, setIsScanning] = useState(true);
   const [lastScan, setLastScan] = useState({ text: '', time: 0 });
+
+  const { ref: zxingRef } = useZxing({
+    paused: !isScanning,
+    onDecodeResult(result) {
+      if (result) {
+        handleScan({ text: result.getText() });
+      }
+    },
+  });
 
   const handleScan = async (result, error) => {
     if (!!result) {
@@ -272,11 +281,11 @@ function NewBill({ scannedItems, addItemToBill, increaseItemQuantity, decreaseIt
         >
           {isScanning ? (
             <Box sx={{ position: 'relative', width: '100%', height: 130, bgcolor: '#000', borderRadius: 1.8, overflow: 'hidden' }}>
-              <QrReader
-                onResult={handleScan}
-                constraints={{ facingMode: 'environment' }}
-                containerStyle={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}
-                videoStyle={{ objectFit: 'cover' }}
+              <video
+                ref={zxingRef}
+                muted
+                playsInline
+                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
               <IconButton
                 size="small"

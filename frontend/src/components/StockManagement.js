@@ -146,15 +146,14 @@ function StockManagement() {
     const random4Digit = Math.floor(1000 + Math.random() * 9000).toString();
     setFormData({ ...formData, barcode: random4Digit });
   };
-  const handleScan = (result) => {
-    if (result) {
-      setFormData({ ...formData, barcode: result });
-      setShowScanner(false);
+  const handleScan = (result, error) => {
+    if (!!result) {
+      const scannedText = result?.text;
+      if (scannedText) {
+        setFormData({ ...formData, barcode: scannedText });
+        setShowScanner(false);
+      }
     }
-  };
-  const handleError = (err) => {
-    setError('QR/Barcode scan error: ' + err);
-    setShowScanner(false);
   };
 
   const handleDelete = async (id) => {
@@ -343,15 +342,8 @@ function StockManagement() {
           {showScanner && (
             <Box sx={{ mt: 2, mb: 2, width: '100%' }}>
               <QrReader
-                onResult={(result, error) => {
-                  if (result) {
-                    handleScan(result?.text);
-                  }
-                  if (error) {
-                    handleError(error);
-                  }
-                }}
-                onError={handleError}
+                onResult={handleScan}
+                constraints={{ facingMode: 'environment' }}
                 style={{ width: '100%' }}
               />
             </Box>
