@@ -3,7 +3,7 @@ import { getStoredAuth } from '../utils/auth';
 
 const API_BASE_URL =
   process.env.REACT_APP_API_URL?.trim() ||
-  '/api';
+  'https://billing-deep-backend.onrender.com/api';
 
 const axiosClient = axios.create({
   baseURL: API_BASE_URL,
