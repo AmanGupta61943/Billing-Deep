@@ -46,22 +46,28 @@ function NewBill({ scannedItems, addItemToBill, increaseItemQuantity, decreaseIt
 
 
   const handleBarcodeScan = async (barcode) => {
+    console.log('[NewBill] handleBarcodeScan called with:', barcode);
     try {
       const response = await axiosClient.get('/api/products/barcode/' + barcode);
       const product = response.data;
-
-      if (product) {
-        // Use the prop function to add item (will default quantity to 1)
-        addItemToBill(product);
-      } else {
-        navigate(`/stock/add?barcode=${barcode}`, { state: { fromNewBill: true } });
-      }
+      console.log('[NewBill] Product found:', product);
+      addItemToBill(product);
     } catch (error) {
-      console.error('Error checking product:', error);
-      if (error.response && error.response.status === 404) {
-         navigate(`/stock/add?barcode=${barcode}`, { state: { fromNewBill: true } });
+      const status = error.response?.status;
+      console.error('[NewBill] Scan error — status:', status, '| code:', error.code, '| msg:', error.message);
+
+      if (status === 404) {
+        // Product not in stock — redirect to add it
+        navigate(`/stock/add?barcode=${barcode}`, { state: { fromNewBill: true } });
+      } else if (status === 401) {
+        alert('Session expired. Please log in again.');
+        navigate('/auth');
+      } else if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+        alert('Backend is starting up (Render cold-start). Wait 15 seconds and scan again.');
+      } else if (!error.response) {
+        alert(`Cannot reach backend. Check your internet connection.\n(Backend URL: ${process.env.REACT_APP_API_URL || 'http://localhost:5000'})`);
       } else {
-        alert('Error scanning product. Please try again.');
+        alert(`Server error (${status}): ${error.response?.data?.message || error.message}`);
       }
     }
   };

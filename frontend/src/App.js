@@ -40,6 +40,7 @@ import PrinterConnection from './components/PrinterConnection';
 import BillCustomization from './components/BillCustomization';
 import ContactUs from './components/ContactUs';
 import { getStoredAuth, clearAuth } from './utils/auth';
+import { pingBackend } from './api/axiosClient';
 import Button from '@mui/material/Button';
 import LogoutIcon from '@mui/icons-material/Logout';
 
@@ -503,6 +504,9 @@ function AppLayout({
 
 function App() {
   const [scannedItems, setScannedItems] = useState([]);
+
+  // Warm up Render backend on app start (free tier sleeps after 15 min)
+  useEffect(() => { pingBackend(); }, []);
 
   // Log scannedItems state whenever it changes
   useEffect(() => {

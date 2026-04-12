@@ -9,8 +9,28 @@ require('dotenv').config({ path: path.resolve(__dirname, '.env') });
 
 const app = express();
 
-// Middleware
-app.use(cors());
+// CORS — allow local dev + production Vercel frontend
+const ALLOWED_ORIGINS = [
+  'http://localhost:3000',
+  'http://localhost:3001',
+  // Add your Vercel URL here (no trailing slash):
+  'https://billing-deep.vercel.app',
+  ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
+];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, Postman)
+    if (!origin) return callback(null, true);
+    if (ALLOWED_ORIGINS.includes(origin)) return callback(null, true);
+    // In development, allow any localhost origin
+    if (origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:')) {
+      return callback(null, true);
+    }
+    callback(new Error(`CORS blocked: ${origin}`));
+  },
+  credentials: true,
+}));
 app.use(express.json());
 
 // MongoDB Connection — always use resolved URI (env or local fallback)
