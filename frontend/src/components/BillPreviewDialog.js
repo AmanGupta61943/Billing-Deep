@@ -22,6 +22,18 @@ function BillPreviewDialog({ open, onClose, billData }) {
   const theme = useTheme();
   const fullScreen = useMediaQuery(theme.breakpoints.down('sm'));
   const printRef = React.useRef();
+  const [settings, setSettings] = React.useState({});
+
+  React.useEffect(() => {
+    if (open) {
+      const savedConf = localStorage.getItem('billSettings');
+      if (savedConf) {
+        try {
+          setSettings(JSON.parse(savedConf));
+        } catch(e) {}
+      }
+    }
+  }, [open]);
 
   const handlePrint = useReactToPrint({
     content: () => printRef.current,
@@ -90,11 +102,26 @@ function BillPreviewDialog({ open, onClose, billData }) {
         <Box ref={printRef} sx={{ p: 2 }}>
           {/* Header */}
           <Box sx={{ textAlign: 'center', mb: 2 }}>
-            <Typography variant="h5" gutterBottom>
-              Billing Deep
+            <Typography variant="h5" sx={{ fontWeight: 700, mb: 0.5 }}>
+              {settings.storeName || 'Billing Deep'}
             </Typography>
-            <Typography variant="body2">
-              {new Date(billData.date).toLocaleString()}
+            {settings.address && (
+              <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', color: '#555', lineHeight: 1.2 }}>
+                {settings.address}
+              </Typography>
+            )}
+            {settings.phone && (
+              <Typography variant="body2" sx={{ color: '#555', mt: 0.5 }}>
+                Ph: {settings.phone}
+              </Typography>
+            )}
+            {settings.gstin && (
+              <Typography variant="body2" sx={{ color: '#555' }}>
+                GSTIN: {settings.gstin}
+              </Typography>
+            )}
+            <Typography variant="body2" sx={{ mt: 1, fontWeight: 600 }}>
+              Date: {new Date(billData.date).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
             </Typography>
           </Box>
 
@@ -138,6 +165,13 @@ function BillPreviewDialog({ open, onClose, billData }) {
               Payment Method: {billData.paymentMethod}
             </Typography>
           </Box>
+          {settings.tagline && (
+            <Box sx={{ textAlign: 'center', mt: 2 }}>
+              <Typography variant="body2" sx={{ fontStyle: 'italic', color: '#666' }}>
+                {settings.tagline}
+              </Typography>
+            </Box>
+          )}
         </Box>
       </DialogContent>
       <DialogActions sx={{ justifyContent: 'center', p: 2 }}>

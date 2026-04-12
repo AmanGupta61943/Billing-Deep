@@ -108,7 +108,11 @@ function AddProduct({ addItemToBill }) {
           addItemToBill(tempProduct);
         }
       }
-      navigate('/new-bill');
+      if (location.state?.fromNewBill) {
+        navigate('/new-bill');
+      } else {
+        navigate(-1);
+      }
     } catch (err) {
       const status = err.response?.status;
       const msg = err.response?.data?.message;

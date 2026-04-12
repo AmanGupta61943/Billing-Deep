@@ -35,8 +35,13 @@ import BillingDeepLogin from './components/BillingDeepLogin';
 import SignInPage from './components/SignInPage';
 import SignUpPage from './components/SignUpPage';
 import ProtectedRoute from './components/ProtectedRoute';
-import axiosClient from './api/axiosClient';
-import { getStoredAuth } from './utils/auth';
+import BillHistory from './components/BillHistory';
+import PrinterConnection from './components/PrinterConnection';
+import BillCustomization from './components/BillCustomization';
+import ContactUs from './components/ContactUs';
+import { getStoredAuth, clearAuth } from './utils/auth';
+import Button from '@mui/material/Button';
+import LogoutIcon from '@mui/icons-material/Logout';
 
 const theme = createTheme({
   palette: {
@@ -195,37 +200,13 @@ function Home() {
 }
 
 function MyProfile() {
-  const [users, setUsers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const navigate = useNavigate();
   const { user } = getStoredAuth();
 
-  useEffect(() => {
-    let active = true;
-
-    const loadUsers = async () => {
-      try {
-        const res = await axiosClient.get('/api/auth/users');
-        if (active) {
-          setUsers(Array.isArray(res.data?.users) ? res.data.users : []);
-          setError('');
-        }
-      } catch (err) {
-        if (active) {
-          setError(err?.response?.data?.message || 'Unable to load users.');
-        }
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
-      }
-    };
-
-    loadUsers();
-    return () => {
-      active = false;
-    };
-  }, []);
+  const handleLogout = () => {
+    clearAuth();
+    navigate('/auth');
+  };
 
   return (
     <Container maxWidth="sm" sx={{ mt: 2, pb: 13 }}>
@@ -242,37 +223,32 @@ function MyProfile() {
         </Paper>
       )}
 
-      <Typography sx={{ fontWeight: 600, mb: 1, color: '#333' }}>All Users</Typography>
-      <Paper sx={{ p: 1, borderRadius: 3, boxShadow: '0 4px 14px rgba(0,0,0,0.08)' }}>
-        {loading && <Typography sx={{ p: 1.5, color: '#666' }}>Loading users...</Typography>}
-        {!loading && error && <Typography sx={{ p: 1.5, color: '#a52a2a' }}>{error}</Typography>}
-        {!loading && !error && users.length === 0 && (
-          <Typography sx={{ p: 1.5, color: '#666' }}>No users found.</Typography>
-        )}
-        {!loading &&
-          !error &&
-          users.map((profile) => (
-            <Box
-              key={profile._id}
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: 1.5,
-                p: 1.25,
-                borderRadius: 2,
-                '&:not(:last-child)': { borderBottom: '1px solid #efefef' },
-              }}
-            >
-              <Avatar sx={{ width: 36, height: 36, bgcolor: '#2f2a1d' }}>
-                {(profile.name || '?').slice(0, 1).toUpperCase()}
-              </Avatar>
-              <Box>
-                <Typography sx={{ fontWeight: 600, lineHeight: 1.2 }}>{profile.name}</Typography>
-                <Typography sx={{ color: '#666', fontSize: 13 }}>{profile.email}</Typography>
-              </Box>
-            </Box>
-          ))}
-      </Paper>
+      <Button
+        variant="contained"
+        color="secondary"
+        fullWidth
+        startIcon={<LogoutIcon />}
+        onClick={handleLogout}
+        sx={{
+          mt: 3,
+          py: 1.5,
+          borderRadius: 3,
+          fontWeight: 600,
+          textTransform: 'none',
+          fontSize: 16,
+          boxShadow: '0 4px 14px rgba(220, 0, 78, 0.3)',
+          transition: 'transform 140ms ease, box-shadow 140ms ease',
+          '&:hover': {
+            boxShadow: '0 6px 18px rgba(220, 0, 78, 0.4)',
+            transform: 'translateY(-2px)',
+          },
+          '&:active': {
+            transform: 'translateY(0)',
+          }
+        }}
+      >
+        Logout
+      </Button>
     </Container>
   );
 }
@@ -334,7 +310,7 @@ function BottomNavBar() {
           '&::before': {
             content: '""',
             position: 'absolute',
-            top: -30,
+            top: -24,
             left: '50%',
             transform: 'translateX(-50%)',
             width: 96,
@@ -402,7 +378,7 @@ function BottomNavBar() {
           sx={{
             position: 'absolute',
             left: '50%',
-            top: -34,
+            top: -24,
             transform: 'translateX(-50%)',
             width: 72,
             height: 72,
@@ -514,6 +490,10 @@ function AppLayout({
               </ProtectedRoute>
             }
           />
+          <Route path="/bill-history" element={<ProtectedRoute><BillHistory /></ProtectedRoute>} />
+          <Route path="/printer" element={<ProtectedRoute><PrinterConnection /></ProtectedRoute>} />
+          <Route path="/customize" element={<ProtectedRoute><BillCustomization /></ProtectedRoute>} />
+          <Route path="/contact" element={<ProtectedRoute><ContactUs /></ProtectedRoute>} />
         </Routes>
       </Box>
       {!shouldHideBottomNav && <BottomNavBar />}

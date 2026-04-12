@@ -5,6 +5,8 @@ import SearchIcon from '@mui/icons-material/Search';
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import RemoveIcon from '@mui/icons-material/Remove';
+import CloseIcon from '@mui/icons-material/Close';
+import { QrReader } from 'react-qr-reader';
 import { useNavigate } from 'react-router-dom';
 import axiosClient from '../api/axiosClient';
 import Popper from '@mui/material/Popper';
@@ -32,6 +34,20 @@ function NewBill({ scannedItems, addItemToBill, increaseItemQuantity, decreaseIt
 
   const [billPreviewOpen, setBillPreviewOpen] = useState(false);
   const [createdBill, setCreatedBill] = useState(null);
+  
+  const [isScanning, setIsScanning] = useState(true);
+  const [lastScan, setLastScan] = useState({ text: '', time: 0 });
+
+  const handleScan = async (result, error) => {
+    if (!!result) {
+      const scannedText = result?.text;
+      const now = Date.now();
+      if (scannedText && (scannedText !== lastScan.text || now - lastScan.time > 2000)) {
+        setLastScan({ text: scannedText, time: now });
+        await handleBarcodeScan(scannedText);
+      }
+    }
+  };
 
   const handlePaymentMethodChange = (event) => {
     setPaymentMethod(event.target.value);
@@ -52,12 +68,12 @@ function NewBill({ scannedItems, addItemToBill, increaseItemQuantity, decreaseIt
         // Use the prop function to add item (will default quantity to 1)
         addItemToBill(product);
       } else {
-        navigate(`/stock/add?barcode=${barcode}`);
+        navigate(`/stock/add?barcode=${barcode}`, { state: { fromNewBill: true } });
       }
     } catch (error) {
       console.error('Error checking product:', error);
       if (error.response && error.response.status === 404) {
-         navigate(`/stock/add?barcode=${barcode}`);
+         navigate(`/stock/add?barcode=${barcode}`, { state: { fromNewBill: true } });
       } else {
         alert('Error scanning product. Please try again.');
       }
@@ -149,7 +165,7 @@ function NewBill({ scannedItems, addItemToBill, increaseItemQuantity, decreaseIt
             name: item.name,
             barcode: item.barcode || '',
             quantity: item.quantity,
-            price: item.price
+            price: item.cost != null ? item.cost : (item.price || 0)
         })),
         totalAmount,
         paymentMethod,
@@ -254,36 +270,56 @@ function NewBill({ scannedItems, addItemToBill, increaseItemQuantity, decreaseIt
             boxShadow: '0 5px 20px rgba(0,0,0,0.06)',
           }}
         >
-          <Box
-            sx={{
-              height: 70,
-              bgcolor: '#eeeeee',
-              borderRadius: 1.8,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              px: 1.2,
-            }}
-          >
-            <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center', color: '#7b7b7b' }}>
-              <CameraAltIcon sx={{ fontSize: 34 }} />
+          {isScanning ? (
+            <Box sx={{ position: 'relative', width: '100%', height: 130, bgcolor: '#000', borderRadius: 1.8, overflow: 'hidden' }}>
+              <QrReader
+                onResult={handleScan}
+                constraints={{ facingMode: 'environment' }}
+                containerStyle={{ width: '100%', height: '100%', display: 'flex', justifyContent: 'center', alignItems: 'center' }}
+                videoStyle={{ objectFit: 'cover' }}
+              />
+              <IconButton
+                size="small"
+                onClick={() => setIsScanning(false)}
+                sx={{ position: 'absolute', top: 6, right: 6, zIndex: 10, bgcolor: 'rgba(255,255,255,0.7)', '&:hover': { bgcolor: 'rgba(255,255,255,0.9)' } }}
+              >
+                <CloseIcon fontSize="small" />
+              </IconButton>
             </Box>
-            <Button
-              variant="contained"
-              size="small"
-              onClick={handleTestScan}
+          ) : (
+            <Box
               sx={{
-                borderRadius: 1.4,
-                textTransform: 'uppercase',
-                fontSize: 12,
-                px: 1.5,
-                backgroundColor: '#4caf50',
-                '&:hover': { backgroundColor: '#43a047' },
+                height: 70,
+                bgcolor: '#eeeeee',
+                borderRadius: 1.8,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                px: 1.2,
+                cursor: 'pointer'
               }}
+              onClick={() => setIsScanning(true)}
             >
-              Test Scan
-            </Button>
-          </Box>
+              <Box sx={{ flex: 1, display: 'flex', justifyContent: 'center', color: '#7b7b7b' }}>
+                <CameraAltIcon sx={{ fontSize: 34 }} />
+              </Box>
+              <Button
+                variant="contained"
+                size="small"
+                onClick={(e) => { e.stopPropagation(); setIsScanning(true); }}
+                sx={{
+                  borderRadius: 1.4,
+                  textTransform: 'uppercase',
+                  fontSize: 12,
+                  px: 1.5,
+                  backgroundColor: '#4caf50',
+                  '&:hover': { backgroundColor: '#43a047' },
+                }}
+              >
+                Scan Barcode
+              </Button>
+            </Box>
+          )}
         </Paper>
 
         <Paper
@@ -394,7 +430,7 @@ function NewBill({ scannedItems, addItemToBill, increaseItemQuantity, decreaseIt
           <Button
             variant="contained"
             sx={{ flex: 1, borderRadius: 1.4, backgroundColor: '#8d6e63', textTransform: 'uppercase', fontWeight: 600 }}
-            onClick={() => navigate('/stock/add')}
+            onClick={() => navigate('/stock/add', { state: { fromNewBill: true } })}
           >
             Quick Add
           </Button>
