@@ -121,97 +121,83 @@ function BillPreviewDialog({ open, onClose, billData }) {
         </DialogTitle>
 
         <DialogContent sx={{ p: 0 }}>
-          {/* Printable area */}
-          <Box ref={printRef} sx={{ p: { xs: 2, sm: 3 }, fontFamily: "'Courier New', monospace" }}>
+          {/* Printable area — compact POS style */}
+          <Box ref={printRef} sx={{ p: '12px 16px', fontFamily: "'Courier New', monospace", maxWidth: 380, mx: 'auto' }}>
 
-            {/* Shop header */}
-            <Box sx={{ textAlign: 'center', mb: 1.5 }}>
-              <Typography sx={{ fontWeight: 800, fontSize: 20, fontFamily: 'inherit', letterSpacing: 0.5 }}>
+            {/* ── Shop header ───────────────────────────────────────── */}
+            <Box sx={{ textAlign: 'center', mb: 0.6 }}>
+              <Typography sx={{ fontWeight: 800, fontSize: 16, fontFamily: 'inherit', letterSpacing: 0.3, lineHeight: 1 }}>
                 {settings.storeName || 'Billing Deep'}
               </Typography>
               {settings.address && (
-                <Typography sx={{ fontSize: 12, color: '#555', whiteSpace: 'pre-wrap', lineHeight: 1.4, fontFamily: 'inherit' }}>
+                <Typography sx={{ fontSize: 11, color: '#555', whiteSpace: 'pre-wrap', lineHeight: 1.2, fontFamily: 'inherit' }}>
                   {settings.address}
                 </Typography>
               )}
               {settings.phone && (
-                <Typography sx={{ fontSize: 12, color: '#555', fontFamily: 'inherit' }}>Ph: {settings.phone}</Typography>
+                <Typography sx={{ fontSize: 11, color: '#555', fontFamily: 'inherit' }}>Ph: {settings.phone}</Typography>
               )}
               {settings.gstin && (
-                <Typography sx={{ fontSize: 11, color: '#777', fontFamily: 'inherit' }}>GSTIN: {settings.gstin}</Typography>
+                <Typography sx={{ fontSize: 10, color: '#777', fontFamily: 'inherit' }}>GSTIN: {settings.gstin}</Typography>
               )}
             </Box>
 
-            {settings.showDividers && <Divider sx={{ borderStyle: 'dashed', mb: 1.5 }} />}
+            {settings.showDividers && <Divider sx={{ borderStyle: 'dashed', borderColor: '#bbb', my: 0.6 }} />}
 
-            {/* Bill meta */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', flexWrap: 'wrap', mb: 1 }}>
+            {/* ── Bill meta ─────────────────────────────────────────── */}
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               {settings.showBillNumber && billNo && (
-                <Typography sx={{ fontWeight: 700, fontSize: 13, fontFamily: 'inherit' }}>
-                  Bill No: <span style={{ color: '#005745' }}>#{billNo}</span>
+                <Typography sx={{ fontWeight: 700, fontSize: 11, fontFamily: 'inherit' }}>
+                  Bill: <span style={{ color: '#005745' }}>#{billNo}</span>
                 </Typography>
               )}
-              <Typography sx={{ fontSize: 12, color: '#555', fontFamily: 'inherit', ml: 'auto' }}>
+              <Typography sx={{ fontSize: 11, color: '#555', fontFamily: 'inherit', ml: 'auto' }}>
                 {new Date(billData.date).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
               </Typography>
             </Box>
+            <Typography sx={{ fontSize: 11, color: '#555', fontFamily: 'inherit' }}>
+              Payment: {billData.paymentMethod}
+            </Typography>
 
-            {settings.showDividers && <Divider sx={{ borderStyle: 'dashed', mb: 1.5 }} />}
+            {settings.showDividers && <Divider sx={{ borderStyle: 'dashed', borderColor: '#bbb', my: 0.6 }} />}
 
-            {/* Column headers */}
-            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-              <Typography sx={{ fontSize: 11, fontWeight: 700, color: '#777', fontFamily: 'inherit', flex: 2 }}>ITEM</Typography>
-              <Typography sx={{ fontSize: 11, fontWeight: 700, color: '#777', fontFamily: 'inherit', textAlign: 'right', flex: 1 }}>TOTAL</Typography>
-            </Box>
-
-            {/* Items */}
+            {/* ── Items — single line per item ─────────────────────── */}
             {billData.items.map((item, i) => {
               const lineTotal = (item.quantity * item.price).toFixed(2);
+              const desc      = `${item.name} (${item.quantity}×₹${item.price.toFixed(2)})`;
               return (
-                <Box key={i} sx={{ mb: 0.8 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                    <Typography sx={{ fontSize: 14, fontWeight: 600, fontFamily: 'inherit', flex: 2 }}>{item.name}</Typography>
-                    <Typography sx={{ fontSize: 14, fontWeight: 700, fontFamily: 'inherit', color: '#005745', textAlign: 'right', flex: 1 }}>
-                      ₹{lineTotal}
-                    </Typography>
-                  </Box>
-                  <Typography sx={{ fontSize: 11, color: '#777', fontFamily: 'inherit', ml: 0.5 }}>
-                    {item.quantity} × ₹{item.price.toFixed(2)}
+                <Box key={i} sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', py: '2px' }}>
+                  <Typography sx={{ fontSize: 12, fontFamily: 'inherit', flex: 1, pr: 0.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {desc}
+                  </Typography>
+                  <Typography sx={{ fontSize: 12, fontWeight: 700, fontFamily: 'inherit', flexShrink: 0, color: '#111' }}>
+                    ₹{lineTotal}
                   </Typography>
                 </Box>
               );
             })}
 
-            {settings.showDividers && <Divider sx={{ borderStyle: 'dashed', mt: 1.5, mb: 1.5 }} />}
+            {settings.showDividers && <Divider sx={{ borderStyle: 'dashed', borderColor: '#bbb', my: 0.6 }} />}
 
-            {/* Subtotal + Total */}
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.4 }}>
-              {settings.showSubtotal && (
-                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <Typography sx={{ fontSize: 13, color: '#555', fontFamily: 'inherit' }}>Subtotal</Typography>
-                  <Typography sx={{ fontSize: 13, color: '#555', fontFamily: 'inherit' }}>₹{subtotal.toFixed(2)}</Typography>
-                </Box>
-              )}
+            {/* ── Totals ───────────────────────────────────────────── */}
+            {settings.showSubtotal && (
               <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                <Typography sx={{ fontSize: 16, fontWeight: 800, fontFamily: 'inherit' }}>TOTAL</Typography>
-                <Typography sx={{ fontSize: 16, fontWeight: 800, fontFamily: 'inherit', color: '#005745' }}>
-                  ₹{billData.totalAmount.toFixed(2)}
-                </Typography>
+                <Typography sx={{ fontSize: 11, color: '#555', fontFamily: 'inherit' }}>Subtotal</Typography>
+                <Typography sx={{ fontSize: 11, color: '#555', fontFamily: 'inherit' }}>₹{subtotal.toFixed(2)}</Typography>
               </Box>
-            </Box>
-
-            {/* Payment method */}
-            <Box sx={{ mt: 1.5 }}>
-              <Typography sx={{ fontSize: 12, color: '#666', fontFamily: 'inherit', textAlign: 'center' }}>
-                Payment: {billData.paymentMethod}
+            )}
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.2 }}>
+              <Typography sx={{ fontSize: 14, fontWeight: 800, fontFamily: 'inherit' }}>TOTAL</Typography>
+              <Typography sx={{ fontSize: 14, fontWeight: 800, fontFamily: 'inherit', color: '#005745' }}>
+                ₹{billData.totalAmount.toFixed(2)}
               </Typography>
             </Box>
 
-            {settings.showDividers && <Divider sx={{ borderStyle: 'dashed', mt: 1.5, mb: 1.5 }} />}
+            {settings.showDividers && <Divider sx={{ borderStyle: 'dashed', borderColor: '#bbb', my: 0.6 }} />}
 
-            {/* Tagline */}
+            {/* ── Tagline ───────────────────────────────────────────── */}
             {settings.tagline && (
-              <Typography sx={{ fontSize: 12, fontStyle: 'italic', color: '#666', fontFamily: 'inherit', textAlign: 'center' }}>
+              <Typography sx={{ fontSize: 11, fontStyle: 'italic', color: '#666', fontFamily: 'inherit', textAlign: 'center', mt: 0.3 }}>
                 {settings.tagline}
               </Typography>
             )}
