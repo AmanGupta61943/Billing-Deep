@@ -1,4 +1,13 @@
 const mongoose = require('mongoose');
+const dns = require('dns');
+
+if (dns.setDefaultResultOrder) {
+  try {
+    dns.setDefaultResultOrder('ipv4first');
+  } catch (e) {
+    // ignore
+  }
+}
 
 /**
  * Encode username/password in a MongoDB URI so special characters in passwords work.
@@ -78,6 +87,14 @@ async function connectMongo({
         `MongoDB connection attempt ${attempt}/${maxAttempts} failed:`,
         err.message || err
       );
+      if (err.code === 'ECONNREFUSED' || (err.message && err.message.includes('querySrv'))) {
+        try {
+          console.log('[info] Attempting DNS fallback using Google/Cloudflare DNS...');
+          dns.setServers(['8.8.8.8', '1.1.1.1', '8.8.4.4']);
+        } catch (dnsErr) {
+          // ignore
+        }
+      }
       try {
         if (mongoose.connection.readyState !== 0) {
           await mongoose.disconnect();
